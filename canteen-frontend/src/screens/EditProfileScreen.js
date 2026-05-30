@@ -1,36 +1,67 @@
-import React, { useState, useContext } from 'react';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import React, { useState, useContext, useCallback } from 'react';
 import {
   View,
   Text,
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  SafeAreaView,
   Platform,
   StatusBar,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { CartContext } from '../../App';
+import { useFocusEffect } from '@react-navigation/native';
+import { CartContext } from '../context/CartContext';
+import { useProfile } from '../hooks/useApi';
+import apiService from '../services/apiService';
 
 const EditProfileScreen = ({ navigation }) => {
   const { userProfile, setUserProfile } = useContext(CartContext);
+  const { profile, loading: profileLoading } = useProfile();
   
-  const [name, setName] = useState(userProfile.name);
-  const [email, setEmail] = useState(userProfile.email);
+  const [name, setName] = useState(userProfile.name || '');
+  const [email, setEmail] = useState(userProfile.email || '');
+  const [saving, setSaving] = useState(false);
 
-  const handleSave = () => {
+  useFocusEffect(
+    useCallback(() => {
+      if (profile && profile.name) {
+        setName(profile.name);
+        setEmail(profile.email || '');
+      }
+    }, [profile])
+  );
+
+  const handleSave = async () => {
     if (!name.trim() || !email.trim()) {
       Alert.alert('Error', 'Please fill in all fields.');
       return;
     }
     
-    // Simulate updating backend
-    setUserProfile({ name, email });
-    Alert.alert('Success', 'Profile updated successfully!', [
-      { text: 'OK', onPress: () => navigation.goBack() }
-    ]);
+    try {
+      setSaving(true);
+      const response = await apiService.updateProfile({ name, email });
+      if (response && response.name) {
+         setUserProfile({ name: response.name, email: response.email });
+         Alert.alert('Success', 'Profile updated successfully!', [
+           { text: 'OK', onPress: () => navigation.goBack() }
+         ]);
+      } else {
+         // Fallback to update context anyway
+         setUserProfile({ name, email });
+         Alert.alert('Success', 'Profile updated successfully!', [
+           { text: 'OK', onPress: () => navigation.goBack() }
+         ]);
+      }
+    } catch (error) {
+      console.error('Update profile error:', error);
+      Alert.alert('Error', 'Failed to update profile. Please try again.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -77,14 +108,22 @@ const EditProfileScreen = ({ navigation }) => {
               />
             </View>
 
-            <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
+            <TouchableOpacity 
+              style={[styles.saveButton, saving && { opacity: 0.7 }]} 
+              onPress={handleSave}
+              disabled={saving || profileLoading}
+            >
               <LinearGradient
                 colors={['#FF512F', '#DD2476']}
                 style={styles.gradientButton}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
               >
-                <Text style={styles.saveButtonText}>SAVE CHANGES</Text>
+                {saving ? (
+                  <ActivityIndicator color="#FFF" />
+                ) : (
+                  <Text style={styles.saveButtonText}>SAVE CHANGES</Text>
+                )}
               </LinearGradient>
             </TouchableOpacity>
           </View>
@@ -100,7 +139,6 @@ const styles = StyleSheet.create({
   },
   safeArea: {
     flex: 1,
-    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
   },
   header: {
     flexDirection: 'row',

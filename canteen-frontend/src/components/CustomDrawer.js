@@ -4,7 +4,7 @@ import { DrawerContentScrollView, DrawerItemList } from '@react-navigation/drawe
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { CartContext } from '../../App';
+import { CartContext } from '../context/CartContext';
 
 const CustomDrawer = (props) => {
   const { userProfile } = useContext(CartContext);
@@ -44,6 +44,23 @@ const CustomDrawer = (props) => {
         {/* Menu Items */}
         <View style={styles.menuContainer}>
           <DrawerItemList {...props} />
+          
+          <View style={styles.divider} />
+          
+          <TouchableOpacity style={styles.customMenuItem} onPress={() => navigation.navigate('HomeTabs', { screen: 'Wallet' })}>
+            <Ionicons name="wallet-outline" size={22} color="#888" style={styles.customMenuIcon} />
+            <Text style={styles.customMenuText}>Wallet</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity style={styles.customMenuItem} onPress={() => navigation.navigate('SetWalletPin')}>
+            <Ionicons name="keypad-outline" size={22} color="#888" style={styles.customMenuIcon} />
+            <Text style={styles.customMenuText}>Set Wallet PIN</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity style={styles.customMenuItem} onPress={() => navigation.navigate('ChangeWalletPin')}>
+            <Ionicons name="lock-closed-outline" size={22} color="#888" style={styles.customMenuIcon} />
+            <Text style={styles.customMenuText}>Change Wallet PIN</Text>
+          </TouchableOpacity>
         </View>
       </DrawerContentScrollView>
 
@@ -96,6 +113,28 @@ const styles = StyleSheet.create({
   menuContainer: {
     flex: 1,
     paddingTop: 10,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    marginVertical: 10,
+    marginHorizontal: 15,
+  },
+  customMenuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+  },
+  customMenuIcon: {
+    marginRight: 10,
+    width: 24,
+    textAlign: 'center',
+  },
+  customMenuText: {
+    color: '#888',
+    fontSize: 16,
+    fontWeight: '600',
   },
   footerContainer: {
     padding: 20,

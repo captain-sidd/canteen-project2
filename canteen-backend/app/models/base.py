@@ -11,7 +11,8 @@ def now_utc() -> datetime:
 def object_id_to_str(document: dict[str, Any] | None) -> dict[str, Any] | None:
     if document is None:
         return None
-    document["id"] = str(document.pop("_id"))
+    if "_id" in document:
+        document["id"] = str(document.pop("_id"))
     return document
 
 

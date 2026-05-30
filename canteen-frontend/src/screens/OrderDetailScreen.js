@@ -1,21 +1,50 @@
-import React, { useState } from 'react';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
-  SafeAreaView,
   Platform,
   StatusBar,
   Image,
   ScrollView,
+  ActivityIndicator,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import api from '../services/api';
 
 const OrderDetailScreen = ({ route, navigation }) => {
-  const { order } = route.params;
+  const { order: initialOrder } = route.params;
+  const [order, setOrder] = useState(initialOrder);
   const [viewMode, setViewMode] = useState('receipt'); // 'receipt' or 'qr'
+  const [isPolling, setIsPolling] = useState(true);
+
+  useEffect(() => {
+    const orderId = order.id || order._id;
+    if (!orderId) return;
+
+    const fetchStatus = async () => {
+      try {
+        const response = await api.get(`/orders/${orderId}/status`);
+        if (response.data && response.data.status) {
+          setOrder(prev => ({ ...prev, status: response.data.status }));
+          if (response.data.status.toLowerCase() === 'completed') {
+            setIsPolling(false);
+          }
+        }
+      } catch (err) {
+        console.warn('Failed to poll status', err);
+      }
+    };
+
+    let interval;
+    if (isPolling) {
+      interval = setInterval(fetchStatus, 5000); // Poll every 5 seconds
+    }
+    return () => clearInterval(interval);
+  }, [order.id, order._id, isPolling]);
 
   const orderId = order.id || order._id || 'Unknown';
   const shortId = orderId.toString().slice(-6).toUpperCase();
@@ -26,13 +55,14 @@ const OrderDetailScreen = ({ route, navigation }) => {
   const getStatusColor = (status) => {
     switch (status?.toLowerCase()) {
       case 'completed':
-      case 'ready':
         return '#4CAF50';
+      case 'ready':
+        return '#2196F3';
       case 'preparing':
       case 'processing':
-        return '#FF9800';
+        return '#FFC107';
       case 'pending':
-        return '#FF512F';
+        return '#FF9800';
       default:
         return '#666';
     }
@@ -43,7 +73,10 @@ const OrderDetailScreen = ({ route, navigation }) => {
       <View style={styles.receiptCard}>
         <View style={styles.receiptHeader}>
           <Text style={styles.receiptTitle}>Order Receipt</Text>
-          <View style={[styles.statusBadge, { backgroundColor: getStatusColor(order.status) + '20' }]}>
+          <View style={[styles.statusBadge, { backgroundColor: getStatusColor(order.status) + '20', flexDirection: 'row', alignItems: 'center' }]}>
+            {isPolling && (
+              <ActivityIndicator size="small" color={getStatusColor(order.status)} style={{ marginRight: 6 }} />
+            )}
             <Text style={[styles.statusText, { color: getStatusColor(order.status) }]}>
               {order.status ? order.status.toUpperCase() : 'PENDING'}
             </Text>
@@ -61,7 +94,7 @@ const OrderDetailScreen = ({ route, navigation }) => {
               </Text>
             </View>
             <Text style={styles.itemPrice}>
-              ${((item.price || 0) * (item.quantity || 1)).toFixed(2)}
+              ₹{((item.price || 0) * (item.quantity || 1)).toFixed(2)}
             </Text>
           </View>
         ))}
@@ -70,7 +103,7 @@ const OrderDetailScreen = ({ route, navigation }) => {
 
         <View style={styles.totalRow}>
           <Text style={styles.totalLabel}>Total Price</Text>
-          <Text style={styles.totalAmount}>${parseFloat(totalAmount).toFixed(2)}</Text>
+          <Text style={styles.totalAmount}>₹{parseFloat(totalAmount).toFixed(2)}</Text>
         </View>
       </View>
     </ScrollView>
@@ -152,14 +185,13 @@ const styles = StyleSheet.create({
   },
   safeArea: {
     flex: 1,
-    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingVertical: 15,
+    paddingVertical: 10,
   },
   backButton: {
     padding: 5,

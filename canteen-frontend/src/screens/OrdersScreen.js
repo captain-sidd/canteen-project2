@@ -1,26 +1,38 @@
-import React, { useState, useEffect } from 'react';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   FlatList,
   TouchableOpacity,
-  SafeAreaView,
   Platform,
   StatusBar,
   ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import api from '../services/api';
 
 const OrdersScreen = ({ navigation }) => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [activeTab, setActiveTab] = useState('active');
+  const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
-    fetchOrders();
+  useFocusEffect(
+    useCallback(() => {
+      fetchOrders();
+    }, [])
+  );
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await fetchOrders();
+    setRefreshing(false);
   }, []);
 
   const fetchOrders = async () => {
@@ -43,18 +55,23 @@ const OrdersScreen = ({ navigation }) => {
 
   const getStatusColor = (status) => {
     switch (status?.toLowerCase()) {
-      case 'completed':
-      case 'ready':
-        return '#4CAF50'; // Green
+      case 'completed': return '#4CAF50'; // Green
+      case 'ready': return '#2196F3'; // Blue
       case 'preparing':
-      case 'processing':
-        return '#FF9800'; // Orange
-      case 'pending':
-        return '#FF512F'; // Red-Orange
-      default:
-        return '#666'; // Gray
+      case 'processing': return '#FFC107'; // Yellow
+      case 'pending': return '#FF9800'; // Orange
+      case 'cancelled': return '#F44336'; // Red
+      default: return '#666'; // Gray
     }
   };
+
+  const activeStatuses = ['pending', 'confirmed', 'preparing', 'ready', 'on_the_way'];
+  const completedStatuses = ['completed', 'cancelled'];
+
+  const activeOrders = orders.filter(o => activeStatuses.includes(o.status?.toLowerCase()) || !completedStatuses.includes(o.status?.toLowerCase()));
+  const completedOrders = orders.filter(o => completedStatuses.includes(o.status?.toLowerCase()));
+
+  const displayOrders = activeTab === 'active' ? activeOrders : completedOrders;
 
   const renderOrderCard = ({ item }) => {
     const orderId = item.id || item._id || 'Unknown';
@@ -95,7 +112,23 @@ const OrdersScreen = ({ navigation }) => {
 
         <View style={styles.cardFooter}>
           <Text style={styles.totalLabel}>Total</Text>
-          <Text style={styles.totalAmount}>${parseFloat(totalAmount).toFixed(2)}</Text>
+          <Text style={styles.totalAmount}>₹{parseFloat(totalAmount).toFixed(2)}</Text>
+        </View>
+
+        <View style={styles.cardActions}>
+          <TouchableOpacity style={styles.actionButton} onPress={() => navigation.navigate('OrderDetail', { order: item })}>
+            <Text style={styles.actionButtonText}>View Details</Text>
+          </TouchableOpacity>
+          {item.qr_code && item.status?.toLowerCase() !== 'completed' && item.status?.toLowerCase() !== 'cancelled' && (
+            <TouchableOpacity style={styles.actionButton} onPress={() => navigation.navigate('QR', { qr_code: item.qr_code })}>
+              <Text style={styles.actionButtonText}>Show QR</Text>
+            </TouchableOpacity>
+          )}
+          {item.status?.toLowerCase() === 'completed' && (
+            <TouchableOpacity style={styles.actionButton} onPress={() => {}}>
+              <Text style={styles.actionButtonText}>Receipt</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </TouchableOpacity>
     );
@@ -117,6 +150,21 @@ const OrdersScreen = ({ navigation }) => {
           <View style={{ width: 28 }} /> 
         </View>
 
+        <View style={styles.tabContainer}>
+          <TouchableOpacity 
+            style={[styles.tabButton, activeTab === 'active' && styles.tabButtonActive]}
+            onPress={() => setActiveTab('active')}
+          >
+            <Text style={[styles.tabText, activeTab === 'active' && styles.tabTextActive]}>Active</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={[styles.tabButton, activeTab === 'completed' && styles.tabButtonActive]}
+            onPress={() => setActiveTab('completed')}
+          >
+            <Text style={[styles.tabText, activeTab === 'completed' && styles.tabTextActive]}>Completed</Text>
+          </TouchableOpacity>
+        </View>
+
         {loading ? (
           <View style={styles.centerContainer}>
             <ActivityIndicator size="large" color="#FFF" />
@@ -130,21 +178,24 @@ const OrdersScreen = ({ navigation }) => {
               <Text style={styles.retryText}>Try Again</Text>
             </TouchableOpacity>
           </View>
-        ) : orders.length === 0 ? (
+        ) : displayOrders.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Ionicons name="receipt-outline" size={80} color="rgba(255,255,255,0.7)" />
-            <Text style={styles.emptyText}>No orders yet!</Text>
+            <Text style={styles.emptyText}>No {activeTab} orders yet!</Text>
             <TouchableOpacity style={styles.startOrderingButton} onPress={() => navigation.navigate('Home')}>
               <Text style={styles.startOrderingText}>Explore Menu</Text>
             </TouchableOpacity>
           </View>
         ) : (
           <FlatList
-            data={orders}
+            data={displayOrders}
             keyExtractor={(item, index) => (item.id || item._id || index).toString()}
             renderItem={renderOrderCard}
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#FFF" />
+            }
           />
         )}
       </SafeAreaView>
@@ -158,14 +209,14 @@ const styles = StyleSheet.create({
   },
   safeArea: {
     flex: 1,
-    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingVertical: 15,
+    paddingTop: 10,
+    paddingBottom: 10,
   },
   backButton: {
     padding: 5,
@@ -174,6 +225,31 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
     color: '#FFF',
+  },
+  tabContainer: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    marginHorizontal: 20,
+    borderRadius: 25,
+    padding: 4,
+    marginBottom: 16,
+  },
+  tabButton: {
+    flex: 1,
+    paddingVertical: 10,
+    alignItems: 'center',
+    borderRadius: 20,
+  },
+  tabButtonActive: {
+    backgroundColor: '#FFF',
+  },
+  tabText: {
+    color: '#FFF',
+    fontWeight: '600',
+    fontSize: 15,
+  },
+  tabTextActive: {
+    color: '#FF0844',
   },
   centerContainer: {
     flex: 1,
@@ -234,7 +310,7 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingHorizontal: 20,
-    paddingBottom: 30,
+    paddingBottom: 100,
   },
   orderCard: {
     backgroundColor: 'rgba(255, 255, 255, 0.95)',
@@ -304,6 +380,26 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '900',
     color: '#FF0844',
+  },
+  cardActions: {
+    flexDirection: 'row',
+    borderTopWidth: 1,
+    borderTopColor: '#F0F0F0',
+    paddingTop: 12,
+    marginTop: 12,
+    justifyContent: 'flex-end',
+    gap: 8,
+  },
+  actionButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: 'rgba(255,8,68,0.1)',
+  },
+  actionButtonText: {
+    color: '#FF0844',
+    fontWeight: '600',
+    fontSize: 14,
   },
 });
 

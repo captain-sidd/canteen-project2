@@ -1,20 +1,44 @@
-import React, { useContext } from 'react';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import React, { useContext, useState, useCallback } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
-  SafeAreaView,
   Platform,
   StatusBar,
   Image,
+  ActivityIndicator,
+  ScrollView,
+  RefreshControl,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { CartContext } from '../../App';
+import { useFocusEffect } from '@react-navigation/native';
+import { CartContext } from '../context/CartContext';
+import { useProfile, useWalletBalance } from '../hooks/useApi';
 
 const ProfileScreen = ({ navigation }) => {
-  const { userProfile, walletBalance } = useContext(CartContext);
+  const { userProfile: mockProfile } = useContext(CartContext);
+  const { profile, loading: profileLoading, refetch: refetchProfile } = useProfile();
+  const { balance, loading: balanceLoading, refetch: refetchBalance } = useWalletBalance();
+  const [refreshing, setRefreshing] = useState(false);
+
+  useFocusEffect(
+    useCallback(() => {
+      refetchProfile();
+      refetchBalance();
+    }, [refetchProfile, refetchBalance])
+  );
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await refetchProfile();
+    await refetchBalance();
+    setRefreshing(false);
+  }, [refetchProfile, refetchBalance]);
+
+  const displayProfile = profile && profile.name ? profile : mockProfile;
 
   return (
     <LinearGradient
@@ -32,13 +56,23 @@ const ProfileScreen = ({ navigation }) => {
           <View style={{ width: 28 }} /> 
         </View>
 
-        <View style={styles.content}>
+        <ScrollView 
+          style={styles.content}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#FFF" />
+          }
+        >
           <View style={styles.avatarContainer}>
             <View style={styles.avatarBackground}>
-              <Ionicons name="person" size={60} color="#FF0844" />
+              {profileLoading ? (
+                 <ActivityIndicator size="large" color="#FF0844" />
+              ) : (
+                 <Ionicons name="person" size={60} color="#FF0844" />
+              )}
             </View>
-            <Text style={styles.userName}>{userProfile.name}</Text>
-            <Text style={styles.userEmail}>{userProfile.email}</Text>
+            <Text style={styles.userName}>{displayProfile.name || 'Loading...'}</Text>
+            <Text style={styles.userEmail}>{displayProfile.email || displayProfile.phone || ''}</Text>
           </View>
 
           <View style={styles.card}>
@@ -53,24 +87,6 @@ const ProfileScreen = ({ navigation }) => {
                 <Text style={styles.menuItemText}>Edit Profile</Text>
               </View>
               <Ionicons name="chevron-forward" size={20} color="#CCC" />
-            </TouchableOpacity>
-
-            <View style={styles.divider} />
-
-            <TouchableOpacity 
-              style={styles.menuItem} 
-              onPress={() => navigation.navigate('Wallet')}
-            >
-              <View style={styles.menuItemLeft}>
-                <View style={[styles.iconContainer, { backgroundColor: '#E8F5E9' }]}>
-                  <Ionicons name="wallet-outline" size={22} color="#4CAF50" />
-                </View>
-                <Text style={styles.menuItemText}>My Wallet</Text>
-              </View>
-              <View style={styles.menuItemRight}>
-                <Text style={styles.balanceText}>₹{walletBalance}</Text>
-                <Ionicons name="chevron-forward" size={20} color="#CCC" />
-              </View>
             </TouchableOpacity>
             
             <View style={styles.divider} />
@@ -93,7 +109,7 @@ const ProfileScreen = ({ navigation }) => {
               </View>
             </TouchableOpacity>
           </View>
-        </View>
+        </ScrollView>
       </SafeAreaView>
     </LinearGradient>
   );
@@ -105,7 +121,6 @@ const styles = StyleSheet.create({
   },
   safeArea: {
     flex: 1,
-    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
   },
   header: {
     flexDirection: 'row',

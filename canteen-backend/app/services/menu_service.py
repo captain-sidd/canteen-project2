@@ -17,14 +17,48 @@ async def list_menu_items(
     db: AsyncIOMotorDatabase,
     category: str | None = None,
     available_only: bool = True,
+    veg: bool | None = None,
+    trending: bool | None = None,
+    special: bool | None = None,
+    featured: bool | None = None,
+    sort_by: str = "name",
 ) -> list[dict]:
     filters: dict = {}
     if category:
         filters["category"] = category
     if available_only:
         filters["is_available"] = True
+    if veg is not None:
+        filters["is_veg"] = veg
+    if trending is not None:
+        filters["is_trending"] = trending
+    if special is not None:
+        filters["is_special"] = special
+    if featured is not None:
+        filters["is_featured"] = featured
 
-    cursor = db.menu_items.find(filters).sort("name", 1)
+    sort_field = "name"
+    if sort_by == "price":
+        sort_field = "price"
+    elif sort_by == "rating":
+        sort_field = "rating"
+
+    cursor = db.menu_items.find(filters).sort(sort_field, 1)
+    return [object_id_to_str(item) async for item in cursor]
+
+
+async def get_trending_menu_items(db: AsyncIOMotorDatabase, limit: int = 10) -> list[dict]:
+    cursor = db.menu_items.find({"is_trending": True, "is_available": True}).limit(limit).sort("name", 1)
+    return [object_id_to_str(item) async for item in cursor]
+
+
+async def get_special_menu_items(db: AsyncIOMotorDatabase, limit: int = 10) -> list[dict]:
+    cursor = db.menu_items.find({"is_special": True, "is_available": True}).limit(limit).sort("name", 1)
+    return [object_id_to_str(item) async for item in cursor]
+
+
+async def get_featured_menu_items(db: AsyncIOMotorDatabase, limit: int = 10) -> list[dict]:
+    cursor = db.menu_items.find({"is_featured": True, "is_available": True}).limit(limit).sort("name", 1)
     return [object_id_to_str(item) async for item in cursor]
 
 

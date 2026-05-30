@@ -1,4 +1,5 @@
-import React from 'react';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -6,14 +7,19 @@ import {
   Image,
   TouchableOpacity,
   ScrollView,
-  SafeAreaView,
   Platform,
   StatusBar,
+  ActivityIndicator,
+  FlatList,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import { useTrendingItems, useSpecials, useFeaturedItems, useFeaturedCombos } from '../hooks/useApi';
+import { formatPrice, getSafeImageUri, getItemBadge } from '../utils/dataUtils';
+import HeroCarousel from '../components/HeroCarousel';
+import ComboCard from '../components/ComboCard';
 
-const BANNER_IMAGE = 'https://images.unsplash.com/photo-1513104890138-7c749659a591?q=80&w=800&auto=format&fit=crop';
+// Banner handled in HeroCarousel
 
 const CATEGORIES = [
   { id: '1', name: 'Snacks', icon: 'pizza-outline' },
@@ -22,26 +28,84 @@ const CATEGORIES = [
   { id: '4', name: 'Desserts', icon: 'ice-cream-outline' },
 ];
 
-const SPECIALS = [
-  { id: 's1', name: 'Deluxe Burger Combo', price: '$8.99', image: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?q=80&w=500&auto=format&fit=crop' },
-  { id: 's2', name: 'Spicy Noodles', price: '$6.50', image: 'https://images.unsplash.com/photo-1552611052-33e04de081de?q=80&w=500&auto=format&fit=crop' },
-];
-
-const TRENDING = [
-  { id: 't1', name: 'Cheese Pizza', price: '$12.00', image: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?q=80&w=500&auto=format&fit=crop' },
-  { id: 't2', name: 'Cold Coffee', price: '$4.00', image: 'https://images.unsplash.com/photo-1461023058943-07cb14c4e095?q=80&w=500&auto=format&fit=crop' },
-  { id: 't3', name: 'Fries', price: '$3.50', image: 'https://images.unsplash.com/photo-1576107232684-1279f3908594?q=80&w=500&auto=format&fit=crop' },
-];
-
 const OFFERS = [
   { id: 'o1', title: '20% OFF', subtitle: 'On all Combos', color1: '#FF512F', color2: '#DD2476' },
   { id: 'o2', title: 'Free Drink', subtitle: 'With any Burger', color1: '#43cea2', color2: '#185a9d' },
 ];
 
-const HomeScreen = ({ navigation }) => {
+const ItemCard = ({ item, onPress }) => {
+  const [imageError, setImageError] = useState(false);
   
+  if (!item) return null;
+
+  const originalUrl = getSafeImageUri(item.image_url || item.image);
+  const fallbackUrl = 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?q=80&w=800&auto=format&fit=crop';
+  const imageUrl = imageError ? fallbackUrl : originalUrl;
+  
+  const badge = getItemBadge(item);
+  const displayPrice = item.discount_price
+    ? formatPrice(item.discount_price)
+    : formatPrice(item.price);
+
+  return (
+    <TouchableOpacity 
+      style={styles.itemCard}
+      onPress={onPress}
+      activeOpacity={0.7}
+    >
+      <View style={styles.cardImageContainer}>
+        <Image
+          source={{ uri: imageUrl }}
+          style={styles.cardImage}
+          onError={() => setImageError(true)}
+        />
+        {badge && (
+          <View style={styles.badgeContainer}>
+            <Text style={styles.badgeText}>{badge}</Text>
+          </View>
+        )}
+      </View>
+      <View style={styles.cardContent}>
+        <Text style={styles.itemName} numberOfLines={1}>
+          {item.name || 'Unknown Item'}
+        </Text>
+        <Text style={styles.itemPrice}>{displayPrice}</Text>
+      </View>
+    </TouchableOpacity>
+  );
+};
+
+const MemoizedItemCard = React.memo(ItemCard);
+
+const LoadingSkeletons = ({ count = 3 }) => (
+  <>
+    {Array(count).fill(0).map((_, i) => (
+      <View key={`skeleton-${i}`} style={styles.itemCard}>
+        <View style={[styles.cardImage, { backgroundColor: '#E0E0E0' }]} />
+        <View style={styles.cardContent}>
+          <View style={{ height: 16, backgroundColor: '#E0E0E0', borderRadius: 4, marginBottom: 4 }} />
+          <View style={{ height: 14, backgroundColor: '#E0E0E0', borderRadius: 4, width: '60%' }} />
+        </View>
+      </View>
+    ))}
+  </>
+);
+
+const HomeScreen = ({ navigation }) => {
+  const { items: trending, loading: trendingLoading } = useTrendingItems();
+  const { items: specials, loading: specialsLoading } = useSpecials();
+  const { items: featuredCombos, loading: combosLoading } = useFeaturedCombos();
+
   const handleCategoryPress = (categoryName) => {
     navigation.navigate('Menu', { category: categoryName });
+  };
+
+  const handleItemPress = (item) => {
+    navigation.navigate('FoodDetail', { item });
+  };
+
+  const handleComboPress = (combo) => {
+    navigation.navigate('ComboDetail', { item: combo });
   };
 
   const renderHeader = () => (
@@ -75,86 +139,152 @@ const HomeScreen = ({ navigation }) => {
           contentContainerStyle={styles.scrollContent}
         >
           
-          {/* Hero Banner */}
-          <View style={styles.bannerContainer}>
-            <Image source={{ uri: BANNER_IMAGE }} style={styles.bannerImage} />
-            <LinearGradient
-              colors={['transparent', 'rgba(0,0,0,0.8)']}
-              style={styles.bannerOverlay}
-            >
-              <Text style={styles.bannerTitle}>Fresh & Delicious 🍔</Text>
-              <Text style={styles.bannerSubtitle}>Order your favorite meals</Text>
-            </LinearGradient>
-          </View>
+          {/* 1. Hero Banner */}
+          <HeroCarousel onBannerPress={(banner) => navigation.navigate('Menu')} />
 
-          {/* Quick Categories */}
+          {/* 2. Quick Categories */}
           <View style={styles.sectionContainer}>
-            <Text style={styles.sectionTitle}>Categories</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScroll}>
-              {CATEGORIES.map(cat => (
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Categories</Text>
+            </View>
+            <FlatList
+              data={CATEGORIES}
+              keyExtractor={item => item.id}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={{ width: '100%' }}
+              contentContainerStyle={styles.categoriesScroll}
+              renderItem={({ item }) => (
                 <TouchableOpacity 
-                  key={cat.id} 
                   style={styles.categoryCard}
-                  onPress={() => handleCategoryPress(cat.name)}
+                  onPress={() => handleCategoryPress(item.name)}
                 >
                   <View style={styles.categoryIconContainer}>
-                    <Ionicons name={cat.icon} size={28} color="#FF0844" />
+                    <Ionicons name={item.icon} size={28} color="#FF0844" />
                   </View>
-                  <Text style={styles.categoryName}>{cat.name}</Text>
+                  <Text style={styles.categoryName}>{item.name}</Text>
                 </TouchableOpacity>
-              ))}
-            </ScrollView>
+              )}
+            />
           </View>
 
-          {/* Offers Section */}
+          {/* 3. Today's Special (from API) */}
+          {specials && specials.length > 0 && (
+            <View style={styles.sectionContainer}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Today's Special</Text>
+                <TouchableOpacity onPress={() => navigation.navigate('Menu')}>
+                  <Text style={styles.seeAllText}>See All</Text>
+                </TouchableOpacity>
+              </View>
+              {specialsLoading ? (
+                <View style={styles.horizontalScroll}>
+                  <LoadingSkeletons count={3} />
+                </View>
+              ) : (
+                <FlatList
+                  data={specials}
+                  keyExtractor={item => (item.id || item._id).toString()}
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.horizontalScroll}
+                  renderItem={({ item, index }) => (
+                    <View style={index === specials.length - 1 ? { marginRight: 0 } : {}}>
+                      <MemoizedItemCard item={item} onPress={() => handleItemPress(item)} />
+                    </View>
+                  )}
+                  initialNumToRender={5}
+                />
+              )}
+            </View>
+          )}
+
+          {/* 4. Trending Items (from API) */}
+          {trending && trending.length > 0 && (
+            <View style={styles.sectionContainer}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Trending Now 🔥</Text>
+                <TouchableOpacity onPress={() => navigation.navigate('Menu', { category: '🔥 Trending' })}>
+                  <Text style={styles.seeAllText}>See All</Text>
+                </TouchableOpacity>
+              </View>
+              {trendingLoading ? (
+                <View style={styles.horizontalScroll}>
+                  <LoadingSkeletons count={3} />
+                </View>
+              ) : (
+                <FlatList
+                  data={trending}
+                  keyExtractor={item => (item.id || item._id).toString()}
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.horizontalScroll}
+                  renderItem={({ item, index }) => (
+                    <View style={index === trending.length - 1 ? { marginRight: 0 } : {}}>
+                      <MemoizedItemCard item={item} onPress={() => handleItemPress(item)} />
+                    </View>
+                  )}
+                  initialNumToRender={5}
+                />
+              )}
+            </View>
+          )}
+
+          {/* 5. Featured Combos (from API) */}
+          {featuredCombos && featuredCombos.length > 0 && (
+            <View style={styles.sectionContainer}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Featured Combos 🍱</Text>
+              </View>
+              {combosLoading ? (
+                <View style={styles.horizontalScroll}>
+                  <LoadingSkeletons count={3} />
+                </View>
+              ) : (
+                <FlatList
+                  data={featuredCombos}
+                  keyExtractor={item => (item.id || item._id).toString()}
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.horizontalScroll}
+                  snapToInterval={280 + 16}
+                  decelerationRate="fast"
+                  renderItem={({ item, index }) => (
+                    <ComboCard 
+                      item={item} 
+                      onPress={() => handleComboPress(item)} 
+                      style={[{ width: 280, marginRight: 16 }, index === featuredCombos.length - 1 && { marginRight: 0 }]}
+                    />
+                  )}
+                  initialNumToRender={4}
+                />
+              )}
+            </View>
+          )}
+
+          {/* 6. Offers Section */}
           <View style={styles.sectionContainer}>
-            <Text style={styles.sectionTitle}>Special Offers</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScroll}>
-              {OFFERS.map(offer => (
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Special Offers</Text>
+            </View>
+            <FlatList
+              data={OFFERS}
+              keyExtractor={item => item.id}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.horizontalScroll}
+              renderItem={({ item, index }) => (
                 <LinearGradient
-                  key={offer.id}
-                  colors={[offer.color1, offer.color2]}
+                  colors={[item.color1, item.color2]}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
-                  style={styles.offerCard}
+                  style={[styles.offerCard, index === OFFERS.length - 1 && { marginRight: 0 }]}
                 >
-                  <Text style={styles.offerTitle}>{offer.title}</Text>
-                  <Text style={styles.offerSubtitle}>{offer.subtitle}</Text>
+                  <Text style={styles.offerTitle}>{item.title}</Text>
+                  <Text style={styles.offerSubtitle}>{item.subtitle}</Text>
                 </LinearGradient>
-              ))}
-            </ScrollView>
-          </View>
-
-          {/* Today&apos;s Special */}
-          <View style={styles.sectionContainer}>
-            <Text style={styles.sectionTitle}>Today&apos;s Special</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScroll}>
-              {SPECIALS.map(item => (
-                <View key={item.id} style={styles.specialCard}>
-                  <Image source={{ uri: item.image }} style={styles.specialImage} />
-                  <View style={styles.specialInfo}>
-                    <Text style={styles.specialName} numberOfLines={1}>{item.name}</Text>
-                    <Text style={styles.specialPrice}>{item.price}</Text>
-                  </View>
-                </View>
-              ))}
-            </ScrollView>
-          </View>
-
-          {/* Trending Items */}
-          <View style={styles.sectionContainer}>
-            <Text style={styles.sectionTitle}>Trending Now 🔥</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScroll}>
-              {TRENDING.map(item => (
-                <View key={item.id} style={styles.trendingCard}>
-                  <Image source={{ uri: item.image }} style={styles.trendingImage} />
-                  <View style={styles.trendingInfo}>
-                    <Text style={styles.trendingName} numberOfLines={1}>{item.name}</Text>
-                    <Text style={styles.trendingPrice}>{item.price}</Text>
-                  </View>
-                </View>
-              ))}
-            </ScrollView>
+              )}
+            />
           </View>
 
         </ScrollView>
@@ -169,11 +299,10 @@ const styles = StyleSheet.create({
   },
   safeArea: {
     flex: 1,
-    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
   },
   topHeader: {
     paddingHorizontal: 20,
-    paddingTop: 20,
+    paddingTop: 10,
     paddingBottom: 10,
   },
   titleRow: {
@@ -206,66 +335,40 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 100, // Leave space for bottom tabs
   },
-  bannerContainer: {
-    height: 180,
-    borderRadius: 20,
-    marginHorizontal: 20,
-    marginTop: 10,
-    marginBottom: 24,
-    overflow: 'hidden',
-    backgroundColor: '#E0E0E0',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.2,
-    shadowRadius: 15,
-    elevation: 8,
-  },
-  bannerImage: {
-    width: '100%',
-    height: '100%',
-  },
-  bannerOverlay: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: '60%',
-    justifyContent: 'flex-end',
-    padding: 16,
-  },
-  bannerTitle: {
-    color: '#FFF',
-    fontSize: 24,
-    fontWeight: 'bold',
-    textShadowColor: 'rgba(0,0,0,0.5)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 4,
-  },
-  bannerSubtitle: {
-    color: '#FFF',
-    fontSize: 14,
-    fontWeight: '500',
-    marginTop: 4,
-  },
+
   sectionContainer: {
     marginBottom: 24,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginHorizontal: 20,
+    marginBottom: 12,
   },
   sectionTitle: {
     fontSize: 20,
     fontWeight: '800',
     color: '#FFF',
-    marginLeft: 20,
-    marginBottom: 12,
     textShadowColor: 'rgba(0,0,0,0.1)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 2,
   },
+  seeAllText: {
+    color: '#FFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
   horizontalScroll: {
-    paddingLeft: 20,
+    paddingHorizontal: 20,
+  },
+  categoriesScroll: {
+    paddingHorizontal: 20,
+    flexGrow: 1,
+    justifyContent: 'space-between',
   },
   categoryCard: {
     alignItems: 'center',
-    marginRight: 20,
   },
   categoryIconContainer: {
     width: 64,
@@ -311,67 +414,54 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     opacity: 0.9,
   },
-  specialCard: {
-    width: 280,
-    backgroundColor: '#FFF',
-    borderRadius: 20,
+  itemCard: {
+    width: 180,
     marginRight: 16,
+    borderRadius: 16,
     overflow: 'hidden',
+    backgroundColor: '#FFF',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 6,
+    shadowRadius: 8,
+    elevation: 4,
   },
-  specialImage: {
-    width: '100%',
+  cardImageContainer: {
+    position: 'relative',
     height: 140,
-    backgroundColor: '#F0F0F0',
+    backgroundColor: '#E0E0E0',
   },
-  specialInfo: {
-    padding: 16,
-  },
-  specialName: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 4,
-  },
-  specialPrice: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#FF0844',
-  },
-  trendingCard: {
-    width: 160,
-    backgroundColor: '#FFF',
-    borderRadius: 20,
-    marginRight: 16,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    elevation: 5,
-  },
-  trendingImage: {
+  cardImage: {
     width: '100%',
-    height: 120,
-    backgroundColor: '#F0F0F0',
+    height: '100%',
   },
-  trendingInfo: {
+  badgeContainer: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: '#FF0844',
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 8,
+  },
+  badgeText: {
+    color: '#FFF',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  cardContent: {
     padding: 12,
   },
-  trendingName: {
-    fontSize: 15,
-    fontWeight: 'bold',
+  itemName: {
+    fontSize: 14,
+    fontWeight: '600',
     color: '#333',
     marginBottom: 4,
   },
-  trendingPrice: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: '#FF512F',
+  itemPrice: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#FF0844',
   },
 });
 

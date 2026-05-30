@@ -4,6 +4,9 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createDrawerNavigator } from '@react-navigation/drawer';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as NavigationBar from 'expo-navigation-bar';
+import { Platform } from 'react-native';
 
 import LoginScreen from './src/screens/LoginScreen';
 import RegisterScreen from './src/screens/RegisterScreen';
@@ -18,14 +21,20 @@ import EditProfileScreen from './src/screens/EditProfileScreen';
 import WalletScreen from './src/screens/WalletScreen';
 import CustomDrawer from './src/components/CustomDrawer';
 
+import FoodDetailScreen from './src/screens/FoodDetailScreen';
+import ComboDetailScreen from './src/screens/ComboDetailScreen';
+import SetWalletPinScreen from './src/screens/SetWalletPinScreen';
+import ChangeWalletPinScreen from './src/screens/ChangeWalletPinScreen';
+
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 const Drawer = createDrawerNavigator();
 
-// Export context to share state between screens
-export const CartContext = createContext();
+import { CartContext } from './src/context/CartContext';
 
 function HomeTabs() {
+  const insets = useSafeAreaInsets();
+  
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -48,17 +57,23 @@ function HomeTabs() {
         tabBarActiveTintColor: '#FF0844',
         tabBarInactiveTintColor: 'gray',
         tabBarStyle: {
-          borderTopLeftRadius: 20,
-          borderTopRightRadius: 20,
           position: 'absolute',
+          bottom: insets.bottom ? insets.bottom : 15,
+          left: 20,
+          right: 20,
+          borderRadius: 30,
           backgroundColor: '#ffffff',
-          height: 60,
-          paddingBottom: 10,
+          height: 65,
+          paddingBottom: 0,
+          borderTopWidth: 0,
           shadowColor: '#000',
-          shadowOffset: { width: 0, height: -2 },
-          shadowOpacity: 0.1,
-          shadowRadius: 10,
+          shadowOffset: { width: 0, height: 10 },
+          shadowOpacity: 0.15,
+          shadowRadius: 20,
           elevation: 10,
+        },
+        tabBarItemStyle: {
+          paddingVertical: 10,
         },
       })}
     >
@@ -123,6 +138,13 @@ export default function App() {
     email: 'john.doe@example.com'
   }); // Mock user profile
 
+  React.useEffect(() => {
+    if (Platform.OS === 'android') {
+      NavigationBar.setBackgroundColorAsync('#ffffff');
+      NavigationBar.setButtonStyleAsync('dark');
+    }
+  }, []);
+
   return (
     <CartContext.Provider value={{ cart, setCart, walletBalance, setWalletBalance, userProfile, setUserProfile }}>
       <NavigationContainer>
@@ -137,6 +159,10 @@ export default function App() {
           <Stack.Screen name="MainApp" component={MainApp} />
           <Stack.Screen name="QR" component={QRScreen} />
           <Stack.Screen name="OrderDetail" component={OrderDetailScreen} />
+          <Stack.Screen name="FoodDetail" component={FoodDetailScreen} />
+          <Stack.Screen name="ComboDetail" component={ComboDetailScreen} />
+          <Stack.Screen name="SetWalletPin" component={SetWalletPinScreen} />
+          <Stack.Screen name="ChangeWalletPin" component={ChangeWalletPinScreen} />
         </Stack.Navigator>
       </NavigationContainer>
     </CartContext.Provider>

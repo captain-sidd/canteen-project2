@@ -7,6 +7,7 @@ from pymongo import ReturnDocument
 import qrcode
 
 from app.models.base import ensure_object_id, now_utc, object_id_to_str
+from app.schemas.enums import PaymentMethod
 
 
 def normalize_verified_order(order: dict) -> dict:
@@ -14,6 +15,19 @@ def normalize_verified_order(order: dict) -> dict:
     order.setdefault("order_type", "dine_in")
     order.setdefault("payment_status", "pending")
     order.setdefault("qr_code", None)
+    order.setdefault("subtotal", float(order.get("subtotal", order.get("total_amount", 0.0))))
+    order.setdefault("discount_amount", float(order.get("discount_amount", 0.0)))
+    order.setdefault("tax_amount", float(order.get("tax_amount", 0.0)))
+    order.setdefault("payment_method", order.get("payment_method", PaymentMethod.cash.value))
+    order.setdefault("payment_transaction_id", order.get("payment_transaction_id"))
+    order.setdefault("order_status", order.get("order_status", order.get("status", "pending")))
+    order.setdefault("estimated_ready_time", order.get("estimated_ready_time"))
+    order.setdefault("receipt_url", order.get("receipt_url"))
+    order.setdefault("notes", order.get("notes"))
+    order.setdefault(
+        "status_history",
+        order.get("status_history", [{"status": order.get("status", "pending"), "updated_at": order.get("updated_at")}]),
+    )
 
     for item in order.get("items", []):
         if "price" not in item and "unit_price" in item:

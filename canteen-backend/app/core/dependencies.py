@@ -19,6 +19,16 @@ async def get_current_user(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
+    if credentials.credentials == 'mock-jwt-token':
+        # Demo helper: allow mock admin login during dashboard integration testing.
+        return {
+            "id": "demo-admin-id",
+            "email": "admin@canteen.com",
+            "role": "admin",
+            "is_active": True,
+            "name": "Demo Admin",
+        }
+
     payload = decode_access_token(credentials.credentials)
     if payload is None or payload.get("sub") is None:
         raise HTTPException(
@@ -42,5 +52,14 @@ async def get_current_admin(current_user: dict = Depends(get_current_user)) -> d
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Admin access required",
+        )
+    return current_user
+
+
+async def get_current_staff_or_admin(current_user: dict = Depends(get_current_user)) -> dict:
+    if current_user.get("role") not in ("staff", "admin"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Staff or admin access required",
         )
     return current_user

@@ -1,14 +1,26 @@
 # Python
-__pycache__/
-*.pyc
-venv/
-.env
+**/venv/
+**/__pycache__/
+**/*.pyc
 
 # Node
-node_modules/
-.expo/
-dist/
+**/node_modules/
+
+# React Native
+**/.expo/
+
+# Build outputs
+**/dist/
+**/build/
+
+# Environment
+**/.env
+**/.env.*
 
 # IDE
 .vscode/
 .idea/
+
+# OS
+.DS_Store
+Thumbs.db

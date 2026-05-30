@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef, useContext } from 'react';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import React, { useState, useEffect, useRef, useContext, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,7 +9,6 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Animated,
-  SafeAreaView,
   Platform,
   StatusBar,
   TextInput,
@@ -16,14 +16,17 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import api from '../services/api';
-import { CartContext } from '../../App';
+import apiService from '../services/apiService';
+import { CartContext } from '../context/CartContext';
+import { formatPrice, normalizeMenuItem } from '../utils/dataUtils';
+import ComboCard from '../components/ComboCard';
 
 const DEFAULT_FOOD_IMAGE = 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?q=80&w=800&auto=format&fit=crop';
 
-const CATEGORIES = ['All', 'Snacks', 'Drinks', 'Meals', 'Desserts'];
+const CATEGORIES = ['All', 'Snacks', 'Drinks', 'Meals', 'Desserts', '🔥 Trending', '🍱 Combos'];
 
-const MenuCard = ({ item, index, onAddToCart }) => {
+const MenuCard = ({ item, index, onAddToCart, navigation }) => {
+  const [imageError, setImageError] = useState(false);
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const translateYAnim = useRef(new Animated.Value(20)).current;
 
@@ -44,43 +47,89 @@ const MenuCard = ({ item, index, onAddToCart }) => {
     ]).start();
   }, []);
 
+  const normalized = normalizeMenuItem(item);
+  if (!normalized) return null;
+
+  const displayPrice = normalized.discount_price
+    ? formatPrice(normalized.discount_price)
+    : formatPrice(normalized.price);
+
   return (
-    <Animated.View style={[styles.card, { opacity: fadeAnim, transform: [{ translateY: translateYAnim }] }]}>
-      <Image
-        source={{ uri: item.image_url || DEFAULT_FOOD_IMAGE }}
-        style={styles.cardImage}
-      />
-      <View style={styles.cardContent}>
-        <View style={styles.cardHeader}>
-          <Text style={styles.itemName} numberOfLines={1}>{item.name}</Text>
-          {item.category && (
-            <View style={styles.categoryBadge}>
-              <Text style={styles.categoryText}>{item.category}</Text>
+    <Animated.View style={[styles.cardWrapper, { opacity: fadeAnim, transform: [{ translateY: translateYAnim }] }]}>
+      <TouchableOpacity 
+        style={styles.card}
+        activeOpacity={0.9}
+        onPress={() => navigation.navigate('FoodDetail', { item: normalized })}
+      >
+        <View style={styles.imageContainer}>
+          <Image
+            source={{ uri: imageError ? DEFAULT_FOOD_IMAGE : (normalized.image_url || DEFAULT_FOOD_IMAGE) }}
+            style={styles.cardImage}
+            onError={() => setImageError(true)}
+          />
+          {normalized.is_special && (
+            <View style={styles.specialBadge}>
+              <Text style={styles.specialText}>Special</Text>
             </View>
           )}
         </View>
-
-        <Text style={styles.itemDescription} numberOfLines={2}>
-          {item.description}
-        </Text>
-
-        <View style={styles.cardFooter}>
-          <View>
-            <Text style={styles.itemPrice}>${parseFloat(item.price).toFixed(2)}</Text>
-            <Text style={[styles.itemAvailability, { color: item.is_available ? '#4CAF50' : '#F44336' }]}>
-              {item.is_available ? 'Available' : 'Out of stock'}
-            </Text>
+        <View style={styles.cardContent}>
+          <View style={styles.cardHeader}>
+            <View style={styles.nameRow}>
+              <View style={[styles.vegIndicator, { borderColor: normalized.is_veg ? '#4CAF50' : '#F44336' }]}>
+                <View style={[styles.vegDot, { backgroundColor: normalized.is_veg ? '#4CAF50' : '#F44336' }]} />
+              </View>
+              <Text style={styles.itemName} numberOfLines={1}>{normalized.name}</Text>
+            </View>
           </View>
-          
-          <TouchableOpacity 
-            style={[styles.addButton, !item.is_available && styles.addButtonDisabled]} 
-            disabled={!item.is_available}
-            onPress={() => onAddToCart(item)}
-          >
-            <Text style={styles.addButtonText}>ADD +</Text>
-          </TouchableOpacity>
+
+          <View style={styles.metaRow}>
+            <View style={styles.metaBadge}>
+              <Ionicons name="star" size={12} color="#FFD700" />
+              <Text style={styles.metaText}>{normalized.rating || '4.5'}</Text>
+            </View>
+            <View style={styles.metaBadge}>
+              <Ionicons name="time-outline" size={12} color="#666" />
+              <Text style={styles.metaText}>{normalized.preparation_time || '15'} min</Text>
+            </View>
+          </View>
+
+          <Text style={styles.itemDescription} numberOfLines={2}>
+            {normalized.description || 'Delicious food item'}
+          </Text>
+
+          <View style={styles.tagsScroll}>
+            {normalized.tags && normalized.tags.slice(0,3).map((tag, idx) => (
+              <View key={idx} style={styles.tagChip}>
+                <Text style={styles.tagText}>{tag}</Text>
+              </View>
+            ))}
+          </View>
+
+          <View style={styles.cardFooter}>
+            <View>
+              <View style={styles.priceRow}>
+                <Text style={styles.itemPrice}>{displayPrice}</Text>
+                {normalized.discount_price > 0 && (
+                  <Text style={styles.originalPrice}>₹{normalized.price.toFixed(2)}</Text>
+                )}
+              </View>
+              <Text style={[styles.itemAvailability, { color: normalized.is_available ? '#4CAF50' : '#F44336' }]}>
+                {normalized.is_available ? 'Available' : 'Out of stock'}
+              </Text>
+            </View>
+            
+            <TouchableOpacity 
+              style={[styles.addButton, !normalized.is_available && styles.addButtonDisabled]} 
+              disabled={!normalized.is_available}
+              onPress={() => onAddToCart(normalized)}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.addButtonText}>ADD +</Text>
+            </TouchableOpacity>
+          </View>
         </View>
-      </View>
+      </TouchableOpacity>
     </Animated.View>
   );
 };
@@ -92,6 +141,11 @@ const MenuScreen = ({ route, navigation }) => {
   
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
+  
+  const [activeTab, setActiveTab] = useState('Foods');
+  const [combos, setCombos] = useState([]);
   
   const { cart, setCart } = useContext(CartContext);
 
@@ -99,53 +153,129 @@ const MenuScreen = ({ route, navigation }) => {
   useEffect(() => {
     if (route.params?.category) {
       setSelectedCategory(route.params.category);
+      setPage(1);
+      setMenuItems([]);
     }
   }, [route.params?.category]);
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    setPage(1);
+  }, [activeTab]);
 
-  const fetchData = async () => {
+  useEffect(() => {
+    fetchData();
+  }, [selectedCategory, page, activeTab]);
+
+  const fetchData = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-      const menuRes = await api.get('/menu');
-      setMenuItems(menuRes.data);
+      
+      if (activeTab === 'Foods') {
+        const category = (selectedCategory === 'All' || selectedCategory === '🔥 Trending') ? '' : selectedCategory;
+        const response = await apiService.getMenuItems(page, 20, '', category);
+        
+        if (page === 1) {
+          setMenuItems(response?.items || []);
+        } else {
+          setMenuItems(prev => [...prev, ...(response?.items || [])]);
+        }
+        
+        setHasMore(response?.hasMore || false);
+      } else {
+        const response = await apiService.getCombos(page, 20);
+        
+        if (page === 1) {
+          setCombos(response?.items || []);
+        } else {
+          setCombos(prev => [...prev, ...(response?.items || [])]);
+        }
+        
+        setHasMore(response?.hasMore || false);
+      }
     } catch (err) {
-      console.error('Failed to fetch data:', err);
-      setError('Could not load the menu right now. Please try again.');
+      console.error('Failed to fetch:', err);
+      setError('Could not load data right now. Please try again.');
     } finally {
       setLoading(false);
     }
-  };
+  }, [activeTab, selectedCategory, page]);
 
-  const handleAddToCart = (item) => {
+  const handleAddToCart = useCallback((item) => {
+    const itemId = item.id || item._id;
     setCart((prevCart) => {
-      const existingItem = prevCart.find(cartItem => cartItem.id === item.id);
+      const existingItem = prevCart.find(cartItem => cartItem.id === itemId);
       if (existingItem) {
         return prevCart.map(cartItem =>
-          cartItem.id === item.id
+          cartItem.id === itemId
             ? { ...cartItem, quantity: cartItem.quantity + 1 }
             : cartItem
         );
       } else {
         return [...prevCart, { 
-          id: item.id || item._id, 
-          name: item.name, 
-          price: item.price, 
+          id: itemId, 
+          name: item.name || 'Unknown', 
+          price: item.price || 0,
+          image_url: item.image_url,
           quantity: 1
         }];
       }
     });
-  };
+  }, [setCart]);
+
+  const handleAddComboToCart = useCallback((item) => {
+    const itemId = item.id || item._id;
+    const currentPrice = parseFloat(item.discounted_price || item.discount_price || item.original_price || item.price || 0);
+    setCart((prevCart) => {
+      const existingItem = prevCart.find(cartItem => cartItem.id === itemId);
+      if (existingItem) {
+        return prevCart.map(cartItem =>
+          cartItem.id === itemId
+            ? { ...cartItem, quantity: cartItem.quantity + 1 }
+            : cartItem
+        );
+      } else {
+        return [...prevCart, { 
+          id: itemId, 
+          name: item.name || 'Unknown Combo', 
+          price: currentPrice,
+          image_url: item.image_url,
+          quantity: 1
+        }];
+      }
+    });
+  }, [setCart]);
+
+  const handleSearch = useCallback((text) => {
+    setSearchQuery(text);
+    setPage(1);
+  }, []);
 
   const filteredItems = menuItems.filter((item) => {
-    const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          (item.description && item.description.toLowerCase().includes(searchQuery.toLowerCase()));
-    const matchesCategory = selectedCategory === 'All' || item.category === selectedCategory;
+    if (!item) return false;
+    const itemName = (item.name || '').toLowerCase();
+    const itemDesc = (item.description || '').toLowerCase();
+    const query = searchQuery.toLowerCase();
+    const matchesSearch = !searchQuery || itemName.includes(query) || itemDesc.includes(query);
+    
+    if (selectedCategory === '🔥 Trending') {
+      return matchesSearch && item.is_trending === true;
+    }
+
+    const itemCategory = (item.category || '').toLowerCase();
+    const matchesCategory = selectedCategory === 'All' || itemCategory === selectedCategory.toLowerCase();
     return matchesSearch && matchesCategory;
   });
+
+  const filteredCombos = combos.filter((item) => {
+    if (!item) return false;
+    const itemName = (item.name || '').toLowerCase();
+    const itemDesc = (item.description || '').toLowerCase();
+    const query = searchQuery.toLowerCase();
+    return !searchQuery || itemName.includes(query) || itemDesc.includes(query);
+  });
+
+  const displayItems = activeTab === 'Foods' ? filteredItems : filteredCombos;
 
   const totalCartItems = cart.reduce((sum, item) => sum + item.quantity, 0);
 
@@ -161,35 +291,70 @@ const MenuScreen = ({ route, navigation }) => {
         <Text style={styles.mainTitle}>Menu 🍔</Text>
       </View>
 
-      <View style={styles.searchContainer}>
-        <Ionicons name="search" size={20} color="#888" style={styles.searchIcon} />
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search food..."
-          placeholderTextColor="#888"
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-        />
-        <TouchableOpacity style={styles.filterButton}>
-          <Ionicons name="options" size={20} color="#FFF" />
+      <View style={styles.tabsContainer}>
+        <TouchableOpacity 
+          style={[styles.tabButton, activeTab === 'Foods' && styles.activeTabButton]}
+          onPress={() => setActiveTab('Foods')}
+        >
+          <Text style={[styles.tabText, activeTab === 'Foods' && styles.activeTabText]}>Foods</Text>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={[styles.tabButton, activeTab === 'Combos' && styles.activeTabButton]}
+          onPress={() => setActiveTab('Combos')}
+        >
+          <Text style={[styles.tabText, activeTab === 'Combos' && styles.activeTabText]}>Combos</Text>
         </TouchableOpacity>
       </View>
 
-      <View style={styles.categoriesWrapper}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoriesContainer}>
-          {CATEGORIES.map((category) => (
-            <TouchableOpacity
-              key={category}
-              style={[styles.categoryChip, selectedCategory === category && styles.categoryChipActive]}
-              onPress={() => setSelectedCategory(category)}
-            >
-              <Text style={[styles.categoryChipText, selectedCategory === category && styles.categoryChipTextActive]}>
-                {category}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      </View>
+      {activeTab === 'Foods' && (
+        <View style={styles.searchContainer}>
+          <Ionicons name="search" size={20} color="#888" style={styles.searchIcon} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search food..."
+            placeholderTextColor="#888"
+            value={searchQuery}
+            onChangeText={handleSearch}
+            editable={!loading}
+          />
+          <TouchableOpacity 
+            style={[styles.filterButton, loading && { opacity: 0.6 }]}
+            disabled={loading}
+            onPress={() => setPage(1)}
+          >
+            <Ionicons name="refresh" size={20} color="#FFF" />
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {activeTab === 'Foods' && (
+        <View style={styles.categoriesWrapper}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoriesContainer}>
+            {CATEGORIES.map((category, index) => (
+              <TouchableOpacity
+                key={category}
+                style={[
+                  styles.categoryChip, 
+                  selectedCategory === category && styles.categoryChipActive,
+                  index === CATEGORIES.length - 1 && { marginRight: 0 }
+                ]}
+                onPress={() => {
+                  if (category === '🍱 Combos') {
+                    setActiveTab('Combos');
+                    setSelectedCategory('All');
+                  } else {
+                    setSelectedCategory(category);
+                  }
+                }}
+              >
+                <Text style={[styles.categoryChipText, selectedCategory === category && styles.categoryChipTextActive]}>
+                  {category}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+      )}
     </View>
   );
 
@@ -217,29 +382,62 @@ const MenuScreen = ({ route, navigation }) => {
         ) : (
           <>
             <FlatList
-              data={[{ id: 'header' }, ...filteredItems]}
-              keyExtractor={(item, index) => item.id ? item.id.toString() : index.toString()}
-              stickyHeaderIndices={[0]} // Makes the header (search/categories) sticky
+              data={[{ id: 'header' }, ...displayItems]}
+              keyExtractor={(item, index) => item.id ? (item.id.toString() + index) : ('item-' + index)}
+              stickyHeaderIndices={[0]}
               renderItem={({ item, index }) => {
                 if (item.id === 'header') return renderHeader();
-                return <MenuCard item={item} index={index - 1} onAddToCart={handleAddToCart} />;
+                
+                if (activeTab === 'Combos') {
+                  return (
+                    <View style={{ paddingHorizontal: 20 }}>
+                      <ComboCard 
+                        item={item} 
+                        index={index - 1} 
+                        onAddToCart={handleAddComboToCart}
+                        onPress={(item) => navigation.navigate('ComboDetail', { item })}
+                      />
+                    </View>
+                  );
+                }
+
+                return <MenuCard item={item} index={index - 1} onAddToCart={handleAddToCart} navigation={navigation} />;
               }}
               contentContainerStyle={styles.listContainer}
               showsVerticalScrollIndicator={false}
+              onEndReached={() => hasMore && setPage(page + 1)}
+              onEndReachedThreshold={0.5}
+              ListFooterComponent={() => (
+                hasMore && !loading ? (
+                  <View style={styles.loadMoreContainer}>
+                    <ActivityIndicator size="small" color="#FFF" />
+                  </View>
+                ) : null
+              )}
               ListEmptyComponent={() => (
-                <View style={styles.emptyContainer}>
-                  <Text style={styles.emptyText}>No food found 🍔</Text>
-                </View>
+                displayItems.length === 0 && !loading ? (
+                  <View style={styles.emptyContainer}>
+                    <Ionicons name={activeTab === 'Foods' ? 'fast-food-outline' : 'restaurant-outline'} size={50} color="#FFF" />
+                    <Text style={styles.emptyText}>No {activeTab.toLowerCase()} found 🍔</Text>
+                    <TouchableOpacity 
+                      style={styles.retryButton}
+                      onPress={() => { setPage(1); setSearchQuery(''); }}
+                    >
+                      <Text style={styles.retryText}>Clear Filters</Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : null
               )}
             />
 
-            {totalCartItems > 0 && (
+            {cart && cart.length > 0 && (
               <TouchableOpacity 
                 style={styles.floatingCartButton} 
                 onPress={() => navigation.navigate('Cart')}
+                activeOpacity={0.7}
               >
                 <Ionicons name="cart" size={24} color="#FFF" />
-                <Text style={styles.floatingCartText}>Cart ({totalCartItems})</Text>
+                <Text style={styles.floatingCartText}>Cart ({cart.reduce((sum, item) => sum + (item.quantity || 1), 0)})</Text>
               </TouchableOpacity>
             )}
           </>
@@ -255,7 +453,6 @@ const styles = StyleSheet.create({
   },
   safeArea: {
     flex: 1,
-    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
   },
   centerContainer: {
     flex: 1,
@@ -290,7 +487,7 @@ const styles = StyleSheet.create({
     paddingBottom: 80,
   },
   headerSection: {
-    paddingTop: 20,
+    paddingTop: 10,
     paddingHorizontal: 20,
     paddingBottom: 10,
     backgroundColor: 'rgba(255,154,68,0.95)', // matches top of gradient
@@ -318,6 +515,36 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 16,
+    marginTop: 8,
+  },
+  tabsContainer: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 24,
+    padding: 4,
+    marginBottom: 12,
+  },
+  tabButton: {
+    flex: 1,
+    paddingVertical: 12,
+    alignItems: 'center',
+    borderRadius: 20,
+  },
+  activeTabButton: {
+    backgroundColor: '#FFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  tabText: {
+    color: '#FFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  activeTabText: {
+    color: '#FF0844',
   },
   searchInput: {
     flex: 1,
@@ -353,33 +580,41 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   categoriesWrapper: {
-    marginBottom: 10,
+    marginBottom: 12,
+    marginHorizontal: -20,
   },
   categoriesContainer: {
-    paddingRight: 20,
+    paddingHorizontal: 20,
+    alignItems: 'center',
   },
   categoryChip: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.3)',
-    marginRight: 10,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 24,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    marginRight: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
   },
   categoryChipActive: {
     backgroundColor: '#FFF',
+    borderColor: '#FFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 4,
   },
   categoryChipText: {
     color: '#FFF',
-    fontWeight: '600',
+    fontWeight: '700',
     fontSize: 14,
+    letterSpacing: 0.3,
   },
   categoryChipTextActive: {
     color: '#FF0844',
   },
-  card: {
-    flexDirection: 'row',
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    borderRadius: 20,
+  cardWrapper: {
     marginHorizontal: 20,
     marginBottom: 16,
     shadowColor: '#000',
@@ -387,16 +622,44 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 12,
     elevation: 6,
+  },
+  card: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    borderRadius: 16,
+    overflow: 'hidden',
+    padding: 12,
+  },
+  imageContainer: {
+    width: 120,
+    height: 120,
+    position: 'relative',
+    borderRadius: 12,
     overflow: 'hidden',
   },
   cardImage: {
-    width: 110,
+    width: '100%',
     height: '100%',
     backgroundColor: '#F0F0F0',
   },
+  specialBadge: {
+    position: 'absolute',
+    top: 6,
+    left: 6,
+    backgroundColor: '#FF0844',
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  specialText: {
+    color: '#FFF',
+    fontSize: 9,
+    fontWeight: 'bold',
+  },
   cardContent: {
     flex: 1,
-    padding: 14,
+    paddingLeft: 12,
+    justifyContent: 'space-between',
   },
   cardHeader: {
     flexDirection: 'row',
@@ -404,12 +667,68 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     marginBottom: 4,
   },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    marginRight: 8,
+  },
+  vegIndicator: {
+    width: 12,
+    height: 12,
+    borderWidth: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 6,
+    borderRadius: 2,
+  },
+  vegDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
   itemName: {
     fontSize: 18,
     fontWeight: '800',
     color: '#333',
     flex: 1,
-    marginRight: 8,
+  },
+  metaRow: {
+    flexDirection: 'row',
+    marginBottom: 8,
+    gap: 12,
+  },
+  metaBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F5F5F5',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    gap: 4,
+  },
+  metaText: {
+    fontSize: 12,
+    color: '#666',
+    fontWeight: '600',
+  },
+  tagsScroll: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginBottom: 8,
+  },
+  tagChip: {
+    backgroundColor: '#E3F2FD',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 10,
+    marginRight: 6,
+    marginBottom: 4,
+  },
+  tagText: {
+    color: '#1976D2',
+    fontSize: 9,
+    fontWeight: '600',
   },
   categoryBadge: {
     backgroundColor: '#FFE0E0',
@@ -433,10 +752,22 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'flex-end',
   },
+  priceRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 6,
+  },
   itemPrice: {
     fontSize: 18,
     fontWeight: '900',
-    color: '#333',
+    color: '#FF0844',
+  },
+  originalPrice: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#999',
+    textDecorationLine: 'line-through',
+    marginTop: 2,
   },
   itemAvailability: {
     fontSize: 11,
@@ -494,6 +825,11 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: '#FFF',
     fontWeight: '600',
+    marginTop: 12,
+  },
+  loadMoreContainer: {
+    paddingVertical: 20,
+    alignItems: 'center',
   },
 });
 

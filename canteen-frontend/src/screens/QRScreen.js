@@ -1,11 +1,36 @@
+import { SafeAreaView } from 'react-native-safe-area-context';
 import React from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity, SafeAreaView, Platform, StatusBar } from 'react-native';
+import { View, Text, StyleSheet, Image, TouchableOpacity, Platform, StatusBar } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 
 const QRScreen = ({ route, navigation }) => {
   // Extract qr_code from route params
   const { qr_code } = route.params || {};
+
+  const handleGoHome = () => {
+    navigation.reset({
+      index: 0,
+      routes: [
+        { 
+          name: 'MainApp', 
+          params: { screen: 'HomeTabs', params: { screen: 'Home' } } 
+        }
+      ],
+    });
+  };
+
+  const handleGoOrders = () => {
+    navigation.reset({
+      index: 0,
+      routes: [
+        { 
+          name: 'MainApp', 
+          params: { screen: 'HomeTabs', params: { screen: 'Orders' } } 
+        }
+      ],
+    });
+  };
 
   return (
     <LinearGradient
@@ -16,7 +41,7 @@ const QRScreen = ({ route, navigation }) => {
     >
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.header}>
-          <TouchableOpacity style={styles.backButton} onPress={() => navigation.navigate('Home')}>
+          <TouchableOpacity style={styles.backButton} onPress={handleGoHome}>
             <Ionicons name="home" size={28} color="#FFF" />
           </TouchableOpacity>
         </View>
@@ -40,12 +65,20 @@ const QRScreen = ({ route, navigation }) => {
             )}
           </View>
           
-          <TouchableOpacity 
-            style={styles.doneButton} 
-            onPress={() => navigation.navigate('Home')}
-          >
-            <Text style={styles.doneButtonText}>Back to Menu</Text>
-          </TouchableOpacity>
+          <View style={styles.buttonRow}>
+            <TouchableOpacity 
+              style={styles.doneButton} 
+              onPress={handleGoHome}
+            >
+              <Text style={styles.doneButtonText}>Back to Home</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.doneButton, styles.ordersButton]} 
+              onPress={handleGoOrders}
+            >
+              <Text style={[styles.doneButtonText, styles.ordersButtonText]}>View Orders</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </SafeAreaView>
     </LinearGradient>
@@ -121,15 +154,29 @@ const styles = StyleSheet.create({
   },
   doneButton: {
     backgroundColor: 'rgba(255,255,255,0.2)',
-    paddingHorizontal: 40,
-    paddingVertical: 16,
+    paddingHorizontal: 20,
+    paddingVertical: 14,
     borderRadius: 30,
     borderWidth: 1,
     borderColor: '#FFF',
+    flex: 1,
+    marginHorizontal: 5,
+    alignItems: 'center',
+  },
+  ordersButton: {
+    backgroundColor: '#FFF',
+  },
+  ordersButtonText: {
+    color: '#FF0844',
+  },
+  buttonRow: {
+    flexDirection: 'row',
+    width: '100%',
+    justifyContent: 'space-between',
   },
   doneButtonText: {
     color: '#FFF',
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: 'bold',
   },
 });

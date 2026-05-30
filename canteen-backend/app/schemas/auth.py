@@ -1,6 +1,7 @@
 from pydantic import BaseModel, EmailStr, Field
 
-from app.schemas.user import UserResponse, UserRole
+from app.schemas.enums import UserRole
+from app.schemas.user import UserResponse
 
 
 class RegisterRequest(BaseModel):
@@ -8,7 +9,9 @@ class RegisterRequest(BaseModel):
     email: EmailStr
     password: str = Field(min_length=8, max_length=128)
     full_name: str | None = Field(default=None, max_length=100)
-    role: UserRole = "student"
+    phone: str | None = Field(default=None, max_length=20)
+    profile_image: str | None = Field(default=None, max_length=512)
+    role: UserRole = UserRole.customer
 
 
 class LoginRequest(BaseModel):
