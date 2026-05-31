@@ -7,12 +7,14 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CartContext } from '../context/CartContext';
 
 const CustomDrawer = (props) => {
-  const { userProfile } = useContext(CartContext);
+  const { userProfile, setUserProfile, setWalletBalance } = useContext(CartContext);
   const { navigation } = props;
 
   const handleSignOut = async () => {
     try {
       await AsyncStorage.removeItem('access_token');
+      setUserProfile({});
+      setWalletBalance(0);
       // Reset navigation stack to Login
       navigation.reset({
         index: 0,
@@ -34,7 +36,7 @@ const CustomDrawer = (props) => {
           end={{ x: 1, y: 1 }}
         >
           <Image
-            source={{ uri: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=200&auto=format&fit=crop' }}
+            source={{ uri: userProfile?.profile_image || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=200&auto=format&fit=crop' }}
             style={styles.profileImage}
           />
           <Text style={styles.profileName}>{userProfile?.name || 'User'}</Text>

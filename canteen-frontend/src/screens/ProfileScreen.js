@@ -1,12 +1,10 @@
 import { SafeAreaView } from 'react-native-safe-area-context';
-import React, { useContext, useState, useCallback } from 'react';
+import React, { useContext, useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
-  Platform,
-  StatusBar,
   Image,
   ActivityIndicator,
   ScrollView,
@@ -15,14 +13,27 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CartContext } from '../context/CartContext';
 import { useProfile, useWalletBalance } from '../hooks/useApi';
 
 const ProfileScreen = ({ navigation }) => {
-  const { userProfile: mockProfile } = useContext(CartContext);
+  const { userProfile, setUserProfile, setWalletBalance } = useContext(CartContext);
   const { profile, loading: profileLoading, refetch: refetchProfile } = useProfile();
-  const { balance, loading: balanceLoading, refetch: refetchBalance } = useWalletBalance();
+  const { balance, refetch: refetchBalance } = useWalletBalance();
   const [refreshing, setRefreshing] = useState(false);
+
+  useEffect(() => {
+    if (profile && profile.name) {
+      setUserProfile(profile);
+    }
+  }, [profile, setUserProfile]);
+
+  useEffect(() => {
+    if (balance !== undefined && balance !== null) {
+      setWalletBalance(balance);
+    }
+  }, [balance, setWalletBalance]);
 
   useFocusEffect(
     useCallback(() => {
@@ -38,7 +49,7 @@ const ProfileScreen = ({ navigation }) => {
     setRefreshing(false);
   }, [refetchProfile, refetchBalance]);
 
-  const displayProfile = profile && profile.name ? profile : mockProfile;
+  const displayProfile = profile && profile.name ? profile : userProfile;
 
   return (
     <LinearGradient
@@ -67,6 +78,8 @@ const ProfileScreen = ({ navigation }) => {
             <View style={styles.avatarBackground}>
               {profileLoading ? (
                  <ActivityIndicator size="large" color="#FF0844" />
+              ) : displayProfile?.profile_image ? (
+                 <Image source={{ uri: displayProfile.profile_image }} style={{ width: 120, height: 120, borderRadius: 60 }} />
               ) : (
                  <Ionicons name="person" size={60} color="#FF0844" />
               )}
@@ -93,12 +106,18 @@ const ProfileScreen = ({ navigation }) => {
 
             <TouchableOpacity 
               style={styles.menuItem} 
-              onPress={() => {
-                // Assuming sign out returns to login
-                navigation.reset({
-                  index: 0,
-                  routes: [{ name: 'Login' }],
-                });
+              onPress={async () => {
+                try {
+                  await AsyncStorage.removeItem('access_token');
+                  setUserProfile({});
+                  setWalletBalance(0);
+                  navigation.reset({
+                    index: 0,
+                    routes: [{ name: 'Login' }],
+                  });
+                } catch (error) {
+                  console.error('Error signing out:', error);
+                }
               }}
             >
               <View style={styles.menuItemLeft}>

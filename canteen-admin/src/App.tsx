@@ -47,7 +47,7 @@ function App() {
               <Route path="qr" element={<QRVerification />} />
               <Route path="menu" element={<MenuManagement />} />
               <Route path="combos" element={<ComboManagement />} />
-              <Route path="inventory" element={<InventoryManagement />} />
+              <Route path="inventory" element={<Navigate to="/" replace />} />
               <Route path="offers" element={<div className="p-8">Offers Placeholder</div>} />
               <Route path="users" element={<Users />} />
               <Route path="wallet" element={<WalletDashboard />} />

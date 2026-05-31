@@ -130,7 +130,7 @@ const ComboDetailScreen = ({ route, navigation }) => {
           {/* Included Items */}
           {item.items && item.items.length > 0 && (
             <View style={styles.includedSection}>
-              <Text style={styles.sectionTitle}>What's Included</Text>
+              <Text style={styles.sectionTitle}>{"What's Included"}</Text>
               {item.items.map((incItem, i) => (
                 <View key={i} style={styles.includedItemRow}>
                   <Ionicons name="checkmark-circle" size={20} color="#FF0844" />

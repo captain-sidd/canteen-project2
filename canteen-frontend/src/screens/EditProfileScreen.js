@@ -45,13 +45,13 @@ const EditProfileScreen = ({ navigation }) => {
       setSaving(true);
       const response = await apiService.updateProfile({ name, email });
       if (response && response.name) {
-         setUserProfile({ name: response.name, email: response.email });
+         setUserProfile(response);
          Alert.alert('Success', 'Profile updated successfully!', [
            { text: 'OK', onPress: () => navigation.goBack() }
          ]);
       } else {
          // Fallback to update context anyway
-         setUserProfile({ name, email });
+         setUserProfile(prev => ({ ...prev, name, email }));
          Alert.alert('Success', 'Profile updated successfully!', [
            { text: 'OK', onPress: () => navigation.goBack() }
          ]);

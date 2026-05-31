@@ -132,11 +132,8 @@ function MainApp() {
 
 export default function App() {
   const [cart, setCart] = useState([]);
-  const [walletBalance, setWalletBalance] = useState(500); // Mock wallet balance
-  const [userProfile, setUserProfile] = useState({
-    name: 'John Doe',
-    email: 'john.doe@example.com'
-  }); // Mock user profile
+  const [walletBalance, setWalletBalance] = useState(0); 
+  const [userProfile, setUserProfile] = useState({});
 
   React.useEffect(() => {
     if (Platform.OS === 'android') {

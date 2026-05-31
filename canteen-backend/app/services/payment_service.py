@@ -69,7 +69,7 @@ async def _create_wallet_transaction(
 
 
 async def process_wallet_payment(db: AsyncIOMotorDatabase, current_user: dict, payload: WalletPaymentRequest) -> dict:
-    logger.debug("Processing wallet payment for user %s", current_user.get("id"))
+    logger.debug("[WALLET PAYMENT PAYLOAD] User ID: %s, Payload: %s", current_user.get("id"), payload.model_dump())
 
     checkout_summary = await calculate_checkout_summary(
         db,
@@ -146,7 +146,7 @@ async def process_wallet_payment(db: AsyncIOMotorDatabase, current_user: dict, p
 
 
 async def process_upi_payment(db: AsyncIOMotorDatabase, current_user: dict, payload: UPIPaymentRequest) -> dict:
-    logger.debug("Processing UPI payment for user %s", current_user.get("id"))
+    logger.debug("[UPI PAYMENT PAYLOAD] User ID: %s, Payload: %s", current_user.get("id"), payload.model_dump())
 
     checkout_summary = await calculate_checkout_summary(
         db,

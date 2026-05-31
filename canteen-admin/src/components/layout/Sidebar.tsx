@@ -21,7 +21,7 @@ const SIDEBAR_ITEMS = [
   { name: 'QR Verification', path: '/qr', icon: QrCode },
   { name: 'Menu', path: '/menu', icon: Coffee },
   { name: 'Combos', path: '/combos', icon: UtensilsCrossed },
-  { name: 'Inventory', path: '/inventory', icon: Package },
+
   { name: 'Offers', path: '/offers', icon: Ticket },
   { name: 'Users', path: '/users', icon: Users },
   { name: 'Wallet', path: '/wallet', icon: Wallet },

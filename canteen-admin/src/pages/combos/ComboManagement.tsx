@@ -9,23 +9,13 @@ import { ComboCard } from '@/components/combos/ComboCard';
 import { ComboDialog } from '@/components/combos/ComboDialog';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { combosApi, parseApiError } from '@/api';
+import { combosApi, menuApi, parseApiError } from '@/api';
 import { toast } from 'sonner';
+import { useAuth } from '@/context/AuthContext';
 
-const MOCK_COMBOS: ComboInterface[] = [
-  {
-    id: 'cb1', name: 'Student Power Breakfast', description: 'Perfect heavy breakfast before morning lectures.',
-    items: [{ menuItemId: 'm1', name: 'Masala Dosa', quantity: 1, originalPrice: 80 }, { menuItemId: 'm2', name: 'Filter Coffee', quantity: 1, originalPrice: 30 }, { menuItemId: 'm3', name: 'Idli (2pcs)', quantity: 1, originalPrice: 40 }],
-    originalTotal: 150, comboPrice: 120, savingsPercentage: 20, isActive: true, isFeatured: true, isTrending: true
-  },
-  {
-    id: 'cb2', name: 'Exam Night Fuel', description: 'Heavy caffeine and quick carbs for late night studying.',
-    items: [{ menuItemId: 'm4', name: 'Cold Coffee Thick', quantity: 2, originalPrice: 180 }, { menuItemId: 'm5', name: 'Veg Grilled Sandwich', quantity: 1, originalPrice: 100 }],
-    originalTotal: 280, comboPrice: 220, savingsPercentage: 21, isActive: true, isFeatured: false, isTrending: true
-  }
-];
 
 export default function ComboManagement() {
+  const { isAuthenticated } = useAuth();
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedCombo, setSelectedCombo] = useState<ComboInterface | null>(null);
@@ -37,12 +27,54 @@ export default function ComboManagement() {
     retry: 1
   });
 
-  const usingMocks = isError || !realResponse?.items;
-  // Fallback map since backend combo list returns { items: [], total: x }
-  const combos = usingMocks ? MOCK_COMBOS : realResponse.items;
+  const { data: menuItems, isLoading: isMenuLoading } = useQuery({
+    queryKey: ['menu'],
+    queryFn: menuApi.getAll,
+    retry: 1
+  });
 
+  const loadError = isError;
+
+  // Resolve item names and original prices from the live menu items database
+  const resolvedCombos = React.useMemo(() => {
+    const rawItems = realResponse?.items;
+    if (!Array.isArray(rawItems)) return [];
+
+    const menuList = Array.isArray(menuItems) ? menuItems : [];
+
+    return rawItems.map((combo: any) => {
+      const resolvedItems = (combo.items ?? []).map((item: any) => {
+        const menuItemIdStr = String(item.menuItemId ?? item.menu_item_id ?? '');
+        const menuItem = menuList.find((m: any) => m.id === menuItemIdStr);
+        const itemName = menuItem?.name || item.name || item.menu_item_name || `Item ${menuItemIdStr.slice(-4) || 'Combo Item'}`;
+        const originalPrice = menuItem?.price ?? item.originalPrice ?? item.original_price ?? 0;
+
+        return {
+          ...item,
+          menuItemId: menuItemIdStr,
+          name: itemName,
+          quantity: Number(item.quantity ?? 1),
+          originalPrice,
+        };
+      });
+
+      const originalTotal = resolvedItems.reduce((sum: number, it: any) => sum + (Number(it.originalPrice ?? 0) * Number(it.quantity ?? 1)), 0);
+      const savingsPercentage = originalTotal > 0 ? Math.round(((originalTotal - Number(combo.comboPrice ?? 0)) / originalTotal) * 100) : 0;
+
+      return {
+        ...combo,
+        items: resolvedItems,
+        originalTotal: originalTotal > 0 ? originalTotal : Number(combo.originalTotal ?? combo.original_price ?? 0),
+        savingsPercentage: savingsPercentage > 0 ? savingsPercentage : Number(combo.savingsPercentage ?? combo.discount_percentage ?? 0),
+      };
+    });
+  }, [realResponse, menuItems]);
+
+  const combos = resolvedCombos;
+
+  const totalCombos = combos.length;
   const activeCombos = combos.filter((c: ComboInterface) => c.isActive).length;
-  const avgSavings = Math.round(combos.reduce((acc: number, c: ComboInterface) => acc + c.savingsPercentage, 0) / (combos.length || 1));
+  const avgSavings = Math.round(combos.reduce((acc: number, c: ComboInterface) => acc + Number(c.savingsPercentage ?? 0), 0) / (combos.length || 1));
 
   const deleteMutation = useMutation({
     mutationFn: combosApi.delete,
@@ -65,24 +97,17 @@ export default function ComboManagement() {
 
   const handleDelete = async () => {
     if (comboToDelete) {
-      if (usingMocks) {
-        toast.success(`Mock: Deleted ${comboToDelete.name}`);
-        setComboToDelete(null);
-        return;
-      }
       await deleteMutation.mutateAsync(comboToDelete.id);
       setComboToDelete(null);
     }
   };
 
   const handleSave = async (newCombo: any) => {
-    if (usingMocks) {
-      toast.success(`Mock: Saved ${newCombo.name}`);
-      setIsDialogOpen(false);
-      return;
-    }
     await saveMutation.mutateAsync(newCombo);
   };
+
+  const hasAuth = isAuthenticated && !!localStorage.getItem('admin_token');
+  const isScreenLoading = hasAuth && (isLoading || isMenuLoading);
 
   return (
     <PageContainer>
@@ -101,20 +126,46 @@ export default function ComboManagement() {
         }
       />
 
-      {usingMocks && (
-        <div className="bg-amber-50 border-l-4 border-amber-500 p-3 mb-6 text-sm text-amber-800">
-          <strong>Backend Offline:</strong> Displaying mock combo data. Changes will not be persisted.
+      {loadError && (
+        <div className="bg-red-50 border-l-4 border-red-500 p-3 mb-6 text-xs text-red-800 rounded-r-lg">
+          <strong>Combo data failed to load.</strong> Please verify the backend is available.
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <MetricCard title="Active Combos" value={activeCombos} icon={<Layers />} trend={{ value: 2, label: 'this month', isPositive: true }} />
-        <MetricCard title="Average Savings" value={`${avgSavings}%`} icon={<Percent />} />
-        <MetricCard title="Trending Combos" value={combos.filter((c: ComboInterface) => c.isTrending).length} icon={<Flame />} />
-      </div>
+      {isScreenLoading ? (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          {[1, 2, 3].map(n => (
+            <div key={n} className="bg-white border rounded-xl p-6 shadow-sm space-y-3 animate-pulse">
+              <div className="h-4 bg-slate-200 rounded w-1/2" />
+              <div className="h-8 bg-slate-200 rounded w-3/4" />
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <MetricCard title="Active Combos" value={activeCombos} icon={<Layers />} trend={{ value: 2, label: 'this month', isPositive: true }} />
+          <MetricCard title="Average Savings" value={`${avgSavings}%`} icon={<Percent />} />
+          <MetricCard title="Trending Combos" value={combos.filter((c: ComboInterface) => c.isTrending).length} icon={<Flame />} />
+        </div>
+      )}
 
-      {isLoading ? (
-        <div className="p-8 text-center text-slate-500">Loading combos...</div>
+      {isScreenLoading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[1, 2, 3].map(n => (
+            <div key={n} className="bg-white border rounded-xl p-6 shadow-sm space-y-4 animate-pulse h-80 flex flex-col justify-between">
+              <div className="space-y-2">
+                <div className="h-4 bg-slate-200 rounded w-1/4" />
+                <div className="h-6 bg-slate-200 rounded w-3/4" />
+                <div className="h-3 bg-slate-200 rounded w-5/6" />
+              </div>
+              <div className="space-y-2">
+                <div className="h-4 bg-slate-200 rounded w-full" />
+                <div className="h-4 bg-slate-200 rounded w-full" />
+              </div>
+              <div className="h-10 bg-slate-200 rounded w-full" />
+            </div>
+          ))}
+        </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {combos.map((combo: ComboInterface) => (

@@ -1,3 +1,4 @@
+import logging
 from fastapi import APIRouter, Depends, HTTPException, status
 
 # TODO: Restore admin RBAC after demo
@@ -7,6 +8,7 @@ from app.schemas.order import OrderCreate, OrderResponse, OrderUpdateStatus
 from app.services.order_service import create_order, get_order, list_user_orders, list_all_orders, update_order_status
 
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
@@ -15,7 +17,10 @@ async def place_order(
     payload: OrderCreate,
     current_user: dict = Depends(get_current_user),
 ) -> dict:
-    return await create_order(get_database(), current_user["id"], payload, current_user)
+    logger.debug("[ORDER CREATE] User ID: %s, Payload: %s", current_user.get("id"), payload.model_dump())
+    order = await create_order(get_database(), current_user["id"], payload, current_user)
+    logger.debug("[ORDER CREATE RESPONSE] Order: %s", order)
+    return order
 
 
 @router.get("", response_model=list[OrderResponse])
@@ -47,15 +52,20 @@ async def get_order_status(
     order_id: str,
     current_user: dict = Depends(get_current_user),
 ) -> dict:
-    order = await get_order(get_database(), order_id, current_user["id"])
+    logger.debug("[ORDER STATUS GET] order_id: %s, current_user: %s", order_id, current_user.get("id"))
+    order = await get_order(get_database(), order_id, current_user)
     if order is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
-    return {
+    
+    response_data = {
         "order_id": order["id"],
+        "status": order["order_status"],
         "order_status": order["order_status"],
         "estimated_ready_time": order.get("estimated_ready_time"),
         "updated_at": order["updated_at"],
     }
+    logger.debug("[ORDER STATUS GET RESPONSE] %s", response_data)
+    return response_data
 
 
 @router.patch("/{order_id}/status", response_model=OrderResponse)
@@ -64,4 +74,8 @@ async def change_order_status(
     payload: OrderUpdateStatus,
     _: dict = Depends(get_current_user),
 ) -> dict:
-    return await update_order_status(get_database(), order_id, payload)
+    logger.debug("[ORDER STATUS PATCH] order_id: %s, payload: %s", order_id, payload.model_dump())
+    order = await update_order_status(get_database(), order_id, payload)
+    logger.debug("[ORDER STATUS PATCH RESPONSE] %s", order)
+    return order
+

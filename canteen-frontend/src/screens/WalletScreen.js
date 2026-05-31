@@ -1,5 +1,5 @@
 import { SafeAreaView } from 'react-native-safe-area-context';
-import React, { useState, useContext, useCallback } from 'react';
+import React, { useState, useContext, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   StyleSheet,
   Platform,
-  StatusBar,
   Alert,
   ActivityIndicator,
   FlatList,
@@ -28,6 +27,12 @@ const WalletScreen = ({ navigation }) => {
   const [amount, setAmount] = useState('');
   const [adding, setAdding] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+
+  useEffect(() => {
+    if (balance !== undefined && balance !== null) {
+      setWalletBalance(balance);
+    }
+  }, [balance, setWalletBalance]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -67,6 +72,7 @@ const WalletScreen = ({ navigation }) => {
         setAmount('');
       }
     } catch (err) {
+      console.error('Add wallet balance error:', err);
       Alert.alert('Error', 'Could not add money to wallet. Try again.');
     } finally {
       setAdding(false);

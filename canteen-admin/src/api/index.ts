@@ -4,6 +4,7 @@ import type { OrderInterface } from '@/types/order';
 import type { MenuItemInterface } from '@/types/menu';
 import type { TransactionInterface } from '@/types/wallet';
 import type { UserInterface } from '@/types/user';
+import type { InventoryItemInterface, PaginatedInventoryResponse } from '@/types/inventory';
 
 // Centralized API Error Parser
 export const parseApiError = (error: unknown): string => {
@@ -74,12 +75,15 @@ const mapCombo = (combo: any) => ({
   id: combo.id,
   name: combo.name,
   description: combo.description ?? '',
-  items: (combo.items || []).map((item: any) => ({
-    menuItemId: item.menu_item_id ?? item.menuItemId,
-    name: item.name,
-    quantity: item.quantity,
-    originalPrice: item.original_price ?? item.originalPrice ?? 0,
-  })),
+  items: (combo.items || []).map((item: any) => {
+    const menuItemId = String(item.menu_item_id ?? item.menuItemId ?? item.menu_item_id ?? '');
+    return {
+      menuItemId,
+      name: item.name ?? item.menu_item_name ?? '',
+      quantity: Number(item.quantity ?? 1),
+      originalPrice: item.original_price ?? item.originalPrice ?? 0,
+    };
+  }),
   originalTotal: combo.original_price ?? combo.originalTotal ?? 0,
   comboPrice: combo.combo_price ?? combo.comboPrice ?? 0,
   savingsPercentage: combo.discount_percentage ?? combo.savingsPercentage ?? 0,
@@ -130,6 +134,10 @@ export const ordersApi = {
     const { data } = await apiClient.get('/orders/all');
     return data.map(mapOrder);
   },
+  getById: async (id: string): Promise<OrderInterface> => {
+    const { data } = await apiClient.get(`/orders/${id}`);
+    return mapOrder(data);
+  },
   updateStatus: async ({ id, status }: { id: string; status: string }): Promise<OrderInterface> => {
     const { data } = await apiClient.patch(`/orders/${id}/status`, { status });
     return mapOrder(data);
@@ -145,7 +153,7 @@ export const qrApi = {
 
 export const menuApi = {
   getAll: async () => {
-    const { data } = await apiClient.get('/menu');
+    const { data } = await apiClient.get('/menu', { params: { available_only: false } });
     return Array.isArray(data) ? data.map(mapMenuItem) : [];
   },
   create: async (payload: any) => {
@@ -218,5 +226,27 @@ export const walletApi = {
       ...data,
       items: items.map((txn: any) => mapWalletTransaction(txn)),
     };
+  },
+};
+
+export const inventoryApi = {
+  getAll: async (params?: { page?: number; limit?: number; search?: string }): Promise<PaginatedInventoryResponse> => {
+    const { data } = await apiClient.get('/inventory', { params });
+    return data;
+  },
+  getById: async (id: string): Promise<InventoryItemInterface> => {
+    const { data } = await apiClient.get(`/inventory/${id}`);
+    return data;
+  },
+  create: async (payload: Partial<InventoryItemInterface>): Promise<InventoryItemInterface> => {
+    const { data } = await apiClient.post('/inventory', payload);
+    return data;
+  },
+  update: async ({ id, ...payload }: Partial<InventoryItemInterface> & { id: string }): Promise<InventoryItemInterface> => {
+    const { data } = await apiClient.patch(`/inventory/${id}`, payload);
+    return data;
+  },
+  delete: async (id: string): Promise<void> => {
+    await apiClient.delete(`/inventory/${id}`);
   },
 };

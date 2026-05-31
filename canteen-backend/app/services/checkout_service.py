@@ -27,8 +27,10 @@ async def _fetch_menu_or_combo_item(db: AsyncIOMotorDatabase, menu_item_id: str)
         ) from exc
 
     item = await db.menu_items.find_one({"_id": object_id, "is_available": True})
+    item_type = "menu_item"
     if item is None:
         item = await db.combos.find_one({"_id": object_id, "is_available": True})
+        item_type = "combo"
 
     if item is None:
         logger.warning("Menu item or combo not found: %s", menu_item_id)
@@ -37,24 +39,46 @@ async def _fetch_menu_or_combo_item(db: AsyncIOMotorDatabase, menu_item_id: str)
             detail=f"Item not found or unavailable: {menu_item_id}",
         )
 
+    item["item_type"] = item_type
     return item
 
 
 def _determine_active_price(menu_item: dict) -> tuple[float, float, bool]:
-    regular_price = menu_item.get("price")
-    if regular_price is None:
-        logger.error("Menu item missing regular price: %s", menu_item.get("_id"))
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Menu item missing price: {menu_item.get('name', 'unknown')}",
-        )
-
-    if menu_item.get("is_offer_active") and menu_item.get("discount_price") is not None:
-        active_price = menu_item["discount_price"]
-        is_discounted = True
+    item_type = menu_item.get("item_type", "menu_item")
+    resolved_source = ""
+    
+    if item_type == "combo" or ("combo_price" in menu_item and "price" not in menu_item):
+        regular_price = menu_item.get("combo_price")
+        active_price = regular_price
+        is_discounted = False
+        resolved_source = "combo_price"
     else:
-        active_price = menu_item.get("discount_price") if menu_item.get("discount_price") is not None else regular_price
-        is_discounted = menu_item.get("is_offer_active", False) and menu_item.get("discount_price") is not None
+        regular_price = menu_item.get("price")
+        if regular_price is None:
+            logger.error("Menu item missing regular price: %s", menu_item.get("_id"))
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Menu item missing price: {menu_item.get('name', 'unknown')}",
+            )
+
+        if menu_item.get("is_offer_active") and menu_item.get("discount_price") is not None:
+            active_price = menu_item["discount_price"]
+            is_discounted = True
+            resolved_source = "discount_price (offer active)"
+        else:
+            active_price = menu_item.get("discount_price") if menu_item.get("discount_price") is not None else regular_price
+            is_discounted = menu_item.get("is_offer_active", False) and menu_item.get("discount_price") is not None
+            resolved_source = "discount_price" if menu_item.get("discount_price") is not None else "price"
+
+    logger.debug(
+        "[PRICE RESOLUTION] Item ID: %s, Name: %s, Detected Type: %s, Resolved Source: %s, Regular Price: %s, Active Price: %s",
+        menu_item.get("_id"),
+        menu_item.get("name"),
+        item_type,
+        resolved_source,
+        regular_price,
+        active_price
+    )
 
     try:
         active_price = float(active_price)
@@ -175,6 +199,7 @@ async def build_priced_items(db: AsyncIOMotorDatabase, items: list[dict]) -> tup
             }
         )
 
+    logger.debug("[PRICE SUMMARY] Calculated subtotal: %s, item_discount: %s", round(subtotal, 2), round(item_discount, 2))
     return priced_items, round(subtotal, 2), round(item_discount, 2)
 
 

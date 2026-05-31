@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import type { ComboInterface } from '@/types/combo';
 import { Card, CardContent, CardHeader, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -12,8 +12,25 @@ interface ComboCardProps {
 }
 
 export function ComboCard({ combo, onEdit, onDelete }: ComboCardProps) {
+  const [imageFailed, setImageFailed] = useState(false);
+  const showImage = Boolean(combo.imageUrl && !imageFailed);
+
   return (
     <Card className={cn("overflow-hidden flex flex-col h-full hover:shadow-md transition-shadow", !combo.isActive && "opacity-75")}>
+      {showImage ? (
+        <div className="h-40 overflow-hidden bg-slate-100">
+          <img
+            src={combo.imageUrl}
+            alt={`${combo.name} combo`}
+            onError={() => setImageFailed(true)}
+            className="object-cover w-full h-full"
+          />
+        </div>
+      ) : (
+        <div className="h-40 bg-slate-100 flex items-center justify-center text-xs text-slate-500">
+          No combo image available
+        </div>
+      )}
       <CardHeader className="p-5 border-b bg-slate-50">
         <div className="flex justify-between items-start mb-2">
           <div className="flex gap-2">
@@ -33,13 +50,13 @@ export function ComboCard({ combo, onEdit, onDelete }: ComboCardProps) {
       <CardContent className="p-5 flex-1 flex flex-col gap-4 bg-white">
         <div className="space-y-2 flex-1">
           <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Included Items</h4>
-          {combo.items.map((item, idx) => (
+          {(combo.items || []).map((item, idx) => (
             <div key={idx} className="flex items-start justify-between text-sm">
               <div className="flex gap-2">
                 <span className="font-bold text-slate-600 bg-slate-100 px-1.5 rounded">{item.quantity}x</span>
-                <span className="font-medium text-slate-700">{item.name}</span>
+                <span className="font-medium text-slate-700">{item.name || item.menuItemId || 'Combo Item'}</span>
               </div>
-              <span className="text-slate-400 font-medium">₹{item.originalPrice * item.quantity}</span>
+              <span className="text-slate-400 font-medium">₹{Number(item.originalPrice ?? 0) * Number(item.quantity ?? 1)}</span>
             </div>
           ))}
         </div>

@@ -153,6 +153,7 @@ async def create_order(db: AsyncIOMotorDatabase, user_id: str, payload: OrderCre
 
     try:
         result = await db.orders.insert_one(document)
+        logger.debug("[ORDER DB INSERTED] _id: %s, order_number: %s", result.inserted_id, document.get("order_number"))
     except Exception as exc:
         logger.error("Failed to insert order for user %s: %s", user_id, exc, exc_info=True)
         raise HTTPException(
@@ -180,6 +181,7 @@ async def create_order(db: AsyncIOMotorDatabase, user_id: str, payload: OrderCre
     if current_user is not None:
         created_order["customer_name"] = current_user.get("name")
     qr_data = build_order_qr_data(created_order["id"], user_id)
+    logger.debug("[ORDER QR DATA BUILDING] id: %s, user_id: %s, qr_data: %s", created_order["id"], user_id, qr_data)
     created_order["qr_code"] = generate_qr_code_base64(qr_data)
 
     await db.orders.update_one(
@@ -204,14 +206,53 @@ async def list_all_orders(db: AsyncIOMotorDatabase, limit: int = 50) -> list[dic
 
 
 async def get_order(db: AsyncIOMotorDatabase, order_id: str, current_user: dict) -> dict | None:
+    query_conditions = []
+    
+    # 1. Exact ObjectId check if it is a valid 24-character hex string
     try:
         object_id = ensure_object_id(order_id)
+        query_conditions.append({"_id": object_id})
     except ValueError:
-        return None
-    order = await db.orders.find_one({"_id": object_id, "user_id": current_user["id"]})
+        pass
+    
+    # 2. Exact order_number check
+    query_conditions.append({"order_number": order_id})
+    
+    # 3. Suffix matching (case-insensitive regex match on the end of order_number)
+    query_conditions.append({"order_number": {"$regex": f"{order_id}$", "$options": "i"}})
+    
+    # 4. Containment check on order_number
+    query_conditions.append({"order_number": {"$regex": order_id, "$options": "i"}})
+    
+    # 5. Customer receipt screen shows last 6 characters of ObjectId string representation
+    if len(order_id) >= 4:
+        query_conditions.append({
+            "$expr": {
+                "$regexMatch": {
+                    "input": {"$toString": "$_id"},
+                    "regex": f"{order_id}$",
+                    "options": "i"
+                }
+            }
+        })
+        
+    query = {"$or": query_conditions}
+    
+    # If customer, restrict to their orders
+    is_admin = current_user.get("role") in ["admin", "staff"]
+    if not is_admin:
+        query = {"$and": [query, {"user_id": current_user["id"]}]}
+
+    order = await db.orders.find_one(query)
     order = normalize_order_document(order)
+    
     if order is not None:
-        order["customer_name"] = current_user.get("name")
+        if is_admin:
+            enriched = await _enrich_orders_with_customer_names(db, [order])
+            order = enriched[0]
+        else:
+            order["customer_name"] = current_user.get("name")
+            
     return order
 
 
@@ -222,18 +263,33 @@ async def update_order_status(db: AsyncIOMotorDatabase, order_id: str, payload: 
             detail="Invalid order status",
         )
 
+    query_conditions = []
     try:
         object_id = ensure_object_id(order_id)
-    except ValueError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="Invalid order id",
-        ) from exc
+        query_conditions.append({"_id": object_id})
+    except ValueError:
+        pass
+        
+    query_conditions.append({"order_number": order_id})
+    query_conditions.append({"order_number": {"$regex": f"{order_id}$", "$options": "i"}})
+    query_conditions.append({"order_number": {"$regex": order_id, "$options": "i"}})
+    
+    if len(order_id) >= 4:
+        query_conditions.append({
+            "$expr": {
+                "$regexMatch": {
+                    "input": {"$toString": "$_id"},
+                    "regex": f"{order_id}$",
+                    "options": "i"
+                }
+            }
+        })
 
-    order = await db.orders.find_one({"_id": object_id})
+    order = await db.orders.find_one({"$or": query_conditions})
     if order is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
 
+    object_id = order["_id"]
     current_status = order.get("order_status", order.get("status", "pending"))
 
     # Validate transitions

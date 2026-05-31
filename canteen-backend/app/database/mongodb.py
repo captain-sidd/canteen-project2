@@ -30,6 +30,8 @@ async def connect_to_mongo() -> None:
     await mongodb.database.payments.create_index("order_id")
     await mongodb.database.payments.create_index("user_id")
     await mongodb.database.payments.create_index([("user_id", 1), ("created_at", -1)])
+    await mongodb.database.inventory.create_index("item_code", unique=True)
+    await mongodb.database.inventory.create_index("item_name")
 
 
 async def close_mongo_connection() -> None:

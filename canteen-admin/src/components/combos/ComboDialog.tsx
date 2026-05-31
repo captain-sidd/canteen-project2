@@ -22,14 +22,12 @@ export function ComboDialog({ isOpen, onClose, combo, onSave }: ComboDialogProps
   const handleSave = () => {
     onSave({
       id: combo?.id || Math.random().toString(36).substr(2, 9),
-      name: combo?.name || 'New Value Combo',
+      name: combo?.name || 'New Combo',
       description: combo?.description || 'A great combination of our best items.',
-      items: combo?.items || [
-        { menuItemId: 'mock1', name: 'Placeholder Item', quantity: 1, originalPrice: 100 }
-      ],
-      originalTotal: combo?.originalTotal || 100,
-      comboPrice: combo?.comboPrice || 80,
-      savingsPercentage: combo?.savingsPercentage || 20,
+      items: combo?.items || [],
+      originalTotal: combo?.originalTotal || 0,
+      comboPrice: combo?.comboPrice || 0,
+      savingsPercentage: combo?.savingsPercentage || 0,
       isActive: combo?.isActive ?? true,
       isFeatured: combo?.isFeatured || false,
       isTrending: combo?.isTrending || false,

@@ -172,7 +172,7 @@ const HomeScreen = ({ navigation }) => {
           {specials && specials.length > 0 && (
             <View style={styles.sectionContainer}>
               <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>Today's Special</Text>
+                <Text style={styles.sectionTitle}>{"Today's Special"}</Text>
                 <TouchableOpacity onPress={() => navigation.navigate('Menu')}>
                   <Text style={styles.seeAllText}>See All</Text>
                 </TouchableOpacity>

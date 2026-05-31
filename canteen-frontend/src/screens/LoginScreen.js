@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import {
   View,
   Text,
@@ -8,17 +8,44 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
-  Image,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import api from '../services/api';
+import { CartContext } from '../context/CartContext';
+import apiService from '../services/apiService';
 
 const LoginScreen = ({ navigation }) => {
+  const { setUserProfile, setWalletBalance } = useContext(CartContext);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const restoreSession = async () => {
+      try {
+        const token = await AsyncStorage.getItem('access_token');
+        if (token) {
+          setLoading(true);
+          const profile = await apiService.getProfile();
+          const wallet = await apiService.getWalletBalance();
+          if (profile) {
+            setUserProfile(profile);
+            setWalletBalance(wallet?.balance || 0);
+            navigation.replace('MainApp');
+          } else {
+            await AsyncStorage.removeItem('access_token');
+          }
+        }
+      } catch (error) {
+        console.error('Session restore error:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    restoreSession();
+  }, [navigation, setUserProfile, setWalletBalance]);
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -33,6 +60,15 @@ const LoginScreen = ({ navigation }) => {
 
       if (access_token) {
         await AsyncStorage.setItem('access_token', access_token);
+        
+        // Fetch profile and wallet details from the backend
+        const profile = await apiService.getProfile();
+        const wallet = await apiService.getWalletBalance();
+        if (profile) {
+          setUserProfile(profile);
+          setWalletBalance(wallet?.balance || 0);
+        }
+
         navigation.replace('MainApp');
       } else {
         Alert.alert('Error', 'Login failed');

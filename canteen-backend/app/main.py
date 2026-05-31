@@ -3,8 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
 from app.database.mongodb import close_mongo_connection, connect_to_mongo
-from app.routes import auth, checkout, combo, menu, order, payment, profile, qr, users, wallet
-
+from app.routes import auth, checkout, combo, inventory, menu, order, payment, profile, qr, users, wallet
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -46,3 +45,4 @@ app.include_router(wallet.router, prefix="/api/wallet", tags=["wallet"])
 app.include_router(payment.router, prefix="/api/payments", tags=["payments"])
 app.include_router(checkout.router, prefix="/api/checkout", tags=["checkout"])
 app.include_router(qr.router, prefix="/api/qr", tags=["qr"])
+app.include_router(inventory.router, prefix="/api/inventory", tags=["inventory"])
