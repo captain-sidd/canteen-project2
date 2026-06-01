@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, Query
 # TODO: Restore admin RBAC after demo
 from app.core.dependencies import get_current_user
 from app.database.mongodb import get_database
-from app.schemas.combo import ComboCreate, ComboResponse
+from app.schemas.combo import ComboCreate, ComboUpdate, ComboResponse
 from app.services import combo_service
 
 
@@ -49,7 +49,7 @@ async def get_combo(combo_id: str) -> dict:
 @router.patch("/{combo_id}", response_model=ComboResponse)
 async def update_combo(
     combo_id: str,
-    payload: ComboCreate,
+    payload: ComboUpdate,
     _: dict = Depends(get_current_user),
 ) -> dict:
     return await combo_service.update_combo(get_database(), combo_id, payload)

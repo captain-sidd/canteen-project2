@@ -1,0 +1,116 @@
+\subsection{Use Case Actors}
+\begin{itemize}[nosep]
+  \item \textbf{Student User}: uses the mobile app to authenticate, browse food, pay, and track orders.
+  \item \textbf{Admin User}: uses the admin dashboard to manage the menu, combos, inventory, orders, and wallet metrics.
+\end{itemize}
+
+\subsection{Use Case Diagram}
+\begin{center}
+\begin{tikzpicture}[node distance=2cm, every node/.style={draw, rounded corners, align=center, minimum width=2.5cm}]
+  \node[ellipse] (student) {Student User};
+  \node[ellipse, below=of student] (admin) {Admin User};
+  \node[rectangle, right=of student, xshift=3cm] (browse) {Browse Menu / Combos};
+  \node[rectangle, below=of browse] (order) {Place Order};
+  \node[rectangle, below=of order] (wallet) {Wallet Top-Up \& Payment};
+  \node[rectangle, below=of wallet] (qr) {Show QR / Verify Order};
+  \node[rectangle, right=of admin, xshift=3cm] (manage) {Manage Menu, Combos, Inventory};
+  \node[rectangle, below=of manage] (dashboard) {Monitor Orders \& Payments};
+
+  \draw[-] (student) -- (browse);
+  \draw[-] (student) -- (order);
+  \draw[-] (student) -- (wallet);
+  \draw[-] (student) -- (qr);
+  \draw[-] (admin) -- (manage);
+  \draw[-] (admin) -- (dashboard);
+  \draw[-] (admin) -- (order);
+\end{tikzpicture}
+\end{center}
+
+\subsection{Primary Use Cases}
+\subsubsection{UC1: Student Login and Session Restore}
+\textbf{Actor}: Student User
+\begin{itemize}[nosep]
+  \item \textbf{Description}: The mobile app authenticates the student with email and password.
+  \item \textbf{Trigger}: User opens the app or submits login form.
+  \item \textbf{Preconditions}: User has credentials registered in backend.
+  \item \textbf{Main Flow}:
+    \begin{enumerate}[nosep]
+      \item App sends \texttt{POST /api/auth/login} with credentials.
+      \item Backend returns a JWT token and user data.
+      \item App stores the token in AsyncStorage and fetches profile via \texttt{GET /api/profile}.
+      \item App fetches wallet details via \texttt{GET /api/wallet}.
+    \end{enumerate}
+  \item \textbf{Postconditions}: User is logged in and redirected to the main app.
+\end{itemize}
+
+\subsubsection{UC2: Browse Menu and Add to Cart}
+\textbf{Actor}: Student User
+\begin{itemize}[nosep]
+  \item \textbf{Description}: Student searches and filters menu and combos.
+  \item \textbf{Trigger}: User opens the menu screen or selects a category.
+  \item \textbf{Main Flow}:
+    \begin{enumerate}[nosep]
+      \item App calls \texttt{GET /api/menu} with optional filters, or \texttt{GET /api/combos}.
+      \item Backend returns available items and combo bundles.
+      \item User adds items or combos to cart in the mobile UI.
+    \end{enumerate}
+  \item \textbf{Postconditions}: Cart state updates in \texttt{CartContext} and user can proceed to checkout.
+\end{itemize}
+
+\subsubsection{UC3: Checkout with Wallet or UPI}
+\textbf{Actor}: Student User
+\begin{itemize}[nosep]
+  \item \textbf{Description}: Student completes payment using wallet PIN or UPI.
+  \item \textbf{Trigger}: User confims order in cart screen.
+  \item \textbf{Main Flow}:
+    \begin{enumerate}[nosep]
+      \item App optionally requests checkout summary from \texttt{POST /api/checkout/summary}.
+      \item App submits \texttt{POST /api/orders} with order details.
+      \item If wallet payment is selected, app calls \texttt{POST /api/payments/wallet-pay} with PIN.
+      \item If UPI payment is selected, app calls \texttt{POST /api/payments/upi-pay}.
+    \end{enumerate}
+  \item \textbf{Postconditions}: Order is created, and payment status is returned.
+\end{itemize}
+
+\subsubsection{UC4: View Orders and Present QR Code}
+\textbf{Actor}: Student User
+\begin{itemize}[nosep]
+  \item \textbf{Description}: Student views active and completed orders and displays a QR code.
+  \item \textbf{Trigger}: User opens the orders screen.
+  \item \textbf{Main Flow}:
+    \begin{enumerate}[nosep]
+      \item App calls \texttt{GET /api/orders}.
+      \item App displays active/completed orders and allows order detail navigation.
+      \item If available, user taps \textit{Show QR} to present the QR image.
+    \end{enumerate}
+  \item \textbf{Postconditions}: Student receives current order state and QR for pickup.
+\end{itemize}
+
+\subsubsection{UC5: Admin Manage Menu and Combos}
+\textbf{Actor}: Admin User
+\begin{itemize}[nosep]
+  \item \textbf{Description}: Admin performs CRUD operations on menu items and combos.
+  \item \textbf{Trigger}: Admin navigates to menu or combos management page.
+  \item \textbf{Main Flow}:
+    \begin{enumerate}[nosep]
+      \item Admin dashboard calls \texttt{GET /api/menu} and \texttt{GET /api/combos}.
+      \item Admin submits \texttt{POST /api/menu} or \texttt{POST /api/combos} to create new entries.
+      \item Admin edits existing items with \texttt{PATCH /api/menu/\{item\_id\}} or \texttt{PATCH /api/combos/\{combo\_id\}}.
+      \item Admin removes items using \texttt{DELETE /api/menu/\{item\_id\}} or \texttt{DELETE /api/combos/\{combo\_id\}}.
+    \end{enumerate}
+  \item \textbf{Postconditions}: Catalog is updated and reflected in student browsing.
+\end{itemize}
+
+\subsubsection{UC6: Admin Inventory and Payment Monitoring}
+\textbf{Actor}: Admin User
+\begin{itemize}[nosep]
+  \item \textbf{Description}: Admin monitors inventory, tracks low-stock items, and views payment metrics.
+  \item \textbf{Trigger}: Admin opens inventory or wallet dashboards.
+  \item \textbf{Main Flow}:
+    \begin{enumerate}[nosep]
+      \item Admin dashboard calls \texttt{GET /api/inventory} and \texttt{GET /api/orders/all}.
+      \item Admin records inventory receipts via \texttt{POST /api/inventory} or updates records with \texttt{PATCH /api/inventory/\{id\}}.
+      \item Admin reviews revenue and transaction summaries in the wallet dashboard.
+    \end{enumerate}
+  \item \textbf{Postconditions}: Inventory data and payment metrics are kept current in the admin UI.
+\end{itemize}

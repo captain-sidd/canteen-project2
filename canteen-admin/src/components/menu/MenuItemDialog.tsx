@@ -15,11 +15,14 @@ interface MenuItemDialogProps {
   isOpen: boolean;
   onClose: () => void;
   item: MenuItemInterface | null;
-  onSave: (item: MenuItemInterface) => void;
+  onSave: (item: Partial<MenuItemInterface> & { id?: string }) => void;
 }
 
 export function MenuItemDialog({ isOpen, onClose, item, onSave }: MenuItemDialogProps) {
   const [name, setName] = React.useState(item?.name || '');
+  const [description, setDescription] = React.useState(item?.description || '');
+  const [categoryName, setCategoryName] = React.useState(item?.categoryName || item?.categoryId || 'Uncategorized');
+  const [imageUrl, setImageUrl] = React.useState(item?.imageUrl || '');
   const [price, setPrice] = React.useState(item?.price || 0);
   const [offerPrice, setOfferPrice] = React.useState<number | undefined>(item?.offerPrice);
   const [stockQuantity, setStockQuantity] = React.useState(item?.stockQuantity || 0);
@@ -28,9 +31,13 @@ export function MenuItemDialog({ isOpen, onClose, item, onSave }: MenuItemDialog
   const [inStock, setInStock] = React.useState(item?.inStock ?? true);
   const [isTrending, setIsTrending] = React.useState(item?.isTrending || false);
   const [isFeatured, setIsFeatured] = React.useState(item?.isFeatured || false);
+  const [isSpecial, setIsSpecial] = React.useState(item?.isSpecial || false);
 
   React.useEffect(() => {
     setName(item?.name || '');
+    setDescription(item?.description || '');
+    setCategoryName(item?.categoryName || item?.categoryId || 'Uncategorized');
+    setImageUrl(item?.imageUrl || '');
     setPrice(item?.price || 0);
     setOfferPrice(item?.offerPrice);
     setStockQuantity(item?.stockQuantity || 0);
@@ -39,29 +46,33 @@ export function MenuItemDialog({ isOpen, onClose, item, onSave }: MenuItemDialog
     setInStock(item?.inStock ?? true);
     setIsTrending(item?.isTrending || false);
     setIsFeatured(item?.isFeatured || false);
+    setIsSpecial(item?.isSpecial || false);
   }, [item]);
 
   const handleSave = () => {
     onSave({
-      id: item?.id || Math.random().toString(36).substr(2, 9),
-      name: name || item?.name || 'New Item',
-      categoryId: item?.categoryId || 'c1',
-      categoryName: item?.categoryName || item?.categoryId || 'Category',
-      price: price || item?.price || 100,
-      offerPrice: offerPrice,
+      id: item?.id,
+      name: name.trim() || item?.name || 'New Item',
+      description: description.trim(),
+      categoryId: item?.categoryId || categoryName.trim() || 'uncategorized',
+      categoryName: categoryName.trim() || item?.categoryName || item?.categoryId || 'Uncategorized',
+      imageUrl: imageUrl.trim() || undefined,
+      price: Number(price),
+      offerPrice: offerPrice == null ? undefined : Number(offerPrice),
       dietType,
       inStock,
-      stockQuantity: stockQuantity || item?.stockQuantity || 0,
-      prepTimeMins: prepTimeMins || item?.prepTimeMins || 10,
-      rating: item?.rating || 0,
+      stockQuantity: Number(stockQuantity),
+      prepTimeMins: Number(prepTimeMins),
+      rating: item?.rating ?? 0,
       isTrending,
       isFeatured,
+      isSpecial,
     });
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-xl">
+      <DialogContent className="sm:max-w-xl flex flex-col">
         <DialogHeader>
           <DialogTitle>{item ? 'Edit Menu Item' : 'Add Menu Item'}</DialogTitle>
           <DialogDescription>
@@ -69,10 +80,26 @@ export function MenuItemDialog({ isOpen, onClose, item, onSave }: MenuItemDialog
           </DialogDescription>
         </DialogHeader>
         
-        <div className="grid grid-cols-2 gap-4 py-4">
+        <div className="flex-1 min-h-0 overflow-y-auto pr-2">
+          <div className="grid grid-cols-2 gap-4 py-4">
           <div className="space-y-2 col-span-2">
             <label className="text-sm font-bold text-slate-700">Item Name</label>
             <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Masala Dosa" />
+          </div>
+
+          <div className="space-y-2 col-span-2">
+            <label className="text-sm font-bold text-slate-700">Description</label>
+            <Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="A brief description" />
+          </div>
+
+          <div className="space-y-2 col-span-2">
+            <label className="text-sm font-bold text-slate-700">Category</label>
+            <Input value={categoryName} onChange={(e) => setCategoryName(e.target.value)} placeholder="e.g. Main Course" />
+          </div>
+
+          <div className="space-y-2 col-span-2">
+            <label className="text-sm font-bold text-slate-700">Image URL</label>
+            <Input value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="https://example.com/image.jpg" />
           </div>
 
           <div className="space-y-2">
@@ -148,11 +175,26 @@ export function MenuItemDialog({ isOpen, onClose, item, onSave }: MenuItemDialog
               <option value="false">No</option>
             </select>
           </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-bold text-slate-700">Special</label>
+            <select
+              value={isSpecial ? 'true' : 'false'}
+              className="w-full rounded-md border border-slate-200 p-2"
+              onChange={(e) => setIsSpecial(e.target.value === 'true')}
+            >
+              <option value="true">Yes</option>
+              <option value="false">No</option>
+            </select>
+          </div>
         </div>
+      </div>
 
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancel</Button>
-          <Button onClick={handleSave}>Save Item</Button>
+          <Button onClick={handleSave} disabled={!name.trim() || Number(price) <= 0 || !categoryName.trim()}>
+            Save Item
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

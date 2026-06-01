@@ -15,14 +15,6 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { menuApi, parseApiError } from '@/api';
 import { toast } from 'sonner';
 
-const MOCK_MENU: MenuItemInterface[] = [
-  { id: 'm1', name: 'Veg Burger Combo', categoryId: 'c1', categoryName: 'Fast Food', price: 150, offerPrice: 120, dietType: 'veg', inStock: true, stockQuantity: 45, prepTimeMins: 10, rating: 4.5, isTrending: true, isFeatured: true },
-  { id: 'm2', name: 'Chicken Tikka Roll', categoryId: 'c2', categoryName: 'Rolls', price: 180, dietType: 'non-veg', inStock: true, stockQuantity: 20, prepTimeMins: 15, rating: 4.8, isTrending: true, isFeatured: false },
-  { id: 'm3', name: 'Cold Coffee', categoryId: 'c3', categoryName: 'Beverages', price: 90, dietType: 'veg', inStock: true, stockQuantity: 100, prepTimeMins: 5, rating: 4.2, isTrending: false, isFeatured: false },
-  { id: 'm4', name: 'Paneer Butter Masala', categoryId: 'c4', categoryName: 'Main Course', price: 220, offerPrice: 199, dietType: 'veg', inStock: false, stockQuantity: 0, prepTimeMins: 20, rating: 4.9, isTrending: true, isFeatured: true },
-  { id: 'm5', name: 'Egg Fried Rice', categoryId: 'c4', categoryName: 'Main Course', price: 140, dietType: 'non-veg', inStock: true, stockQuantity: 8, prepTimeMins: 15, rating: 4.0, isTrending: false, isFeatured: false },
-];
-
 export default function MenuManagement() {
   const queryClient = useQueryClient();
   const [view, setView] = useState<'grid' | 'table'>('table');
@@ -37,8 +29,7 @@ export default function MenuManagement() {
     retry: 1
   });
 
-  const usingMocks = isError || !realItems;
-  const items = usingMocks ? MOCK_MENU : realItems;
+  const items = realItems ?? [];
 
   const filteredItems = items.filter((item: MenuItemInterface) => 
     item.name.toLowerCase().includes(search.toLowerCase()) || 
@@ -70,22 +61,12 @@ export default function MenuManagement() {
 
   const handleDelete = async () => {
     if (itemToDelete) {
-      if (usingMocks) {
-        toast.success(`Mock: Deleted ${itemToDelete.name}`);
-        setItemToDelete(null);
-        return;
-      }
       await deleteMutation.mutateAsync(itemToDelete.id);
       setItemToDelete(null);
     }
   };
 
   const handleSave = async (newItem: any) => {
-    if (usingMocks) {
-      toast.success(`Mock: Saved ${newItem.name}`);
-      setIsDialogOpen(false);
-      return;
-    }
     await saveMutation.mutateAsync(newItem);
   };
 
@@ -106,9 +87,9 @@ export default function MenuManagement() {
         }
       />
 
-      {usingMocks && (
-        <div className="bg-amber-50 border-l-4 border-amber-500 p-3 mb-6 text-sm text-amber-800">
-          <strong>Backend Offline:</strong> Displaying mock menu data. Changes will not be persisted.
+      {isError && (
+        <div className="bg-red-50 border-l-4 border-red-500 p-3 mb-6 text-sm text-red-800">
+          <strong>Menu load failed:</strong> Verify the backend and try syncing again.
         </div>
       )}
 

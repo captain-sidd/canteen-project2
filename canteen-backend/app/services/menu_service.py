@@ -8,7 +8,7 @@ from app.schemas.menu_item import MenuItemCreate, MenuItemUpdate
 
 
 async def create_menu_item(db: AsyncIOMotorDatabase, payload: MenuItemCreate) -> dict:
-    document = create_menu_item_document(**payload.model_dump(mode="json"))
+    document = create_menu_item_document(**payload.model_dump(exclude={"created_at", "updated_at"}, mode="json"))
     result = await db.menu_items.insert_one(document)
     return object_id_to_str({**document, "_id": result.inserted_id})
 

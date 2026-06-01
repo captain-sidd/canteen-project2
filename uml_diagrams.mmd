@@ -1,0 +1,133 @@
+%% Mermaid UML diagrams for Canteen Ordering System
+
+%% Use Case Diagram
+flowchart LR
+  student["Student User"]
+  admin["Admin User"]
+  browse("Browse Menu / Combos")
+  order("Place Order")
+  wallet("Wallet Top-up / Payment")
+  qr("Show QR / Order Pickup")
+  manage("Manage Menu, Combos, Inventory")
+  dashboard("Monitor Orders & Payments")
+  student --> browse
+  student --> order
+  student --> wallet
+  student --> qr
+  admin --> manage
+  admin --> dashboard
+  admin --> order
+
+%% Class Diagram
+classDiagram
+  class UserResponse {
+    +str id
+    +EmailStr email
+    +UserRole role
+  }
+  class MenuItemResponse {
+    +str id
+    +str name
+    +float price
+    +str category
+    +bool is_available
+  }
+  class ComboResponse {
+    +str id
+    +str name
+    +list~ComboItem~ items
+    +float combo_price
+  }
+  class OrderResponse {
+    +str id
+    +str user_id
+    +list~OrderItemResponse~ items
+    +float total_amount
+    +PaymentMethod payment_method
+    +OrderStatus status
+  }
+  class WalletDetailsResponse {
+    +float balance
+    +bool is_wallet_active
+    +str wallet_id
+  }
+  class WalletPaymentResponse {
+    +PaymentResponse payment
+    +float wallet_balance
+    +dict wallet_transaction
+  }
+  OrderResponse --> UserResponse : belongs to
+  OrderResponse --> MenuItemResponse : references
+  ComboResponse --> MenuItemResponse : contains
+  WalletDetailsResponse --> UserResponse : owned by
+  WalletPaymentResponse --> OrderResponse : pays for
+
+%% Component Diagram
+flowchart LR
+  mobile["Student Mobile App\n(Expo React Native)"]
+  adminui["Admin Dashboard\n(React + TypeScript)"]
+  backend["Backend Service\n(FastAPI)"]
+  db["MongoDB"]
+  mobile --> backend
+  adminui --> backend
+  backend --> db
+
+%% Deployment Diagram
+flowchart LR
+  mobileDevice["Mobile Device / Emulator"]
+  browser["Browser"]
+  apiServer["API Server\n(FastAPI)"]
+  mongodb["MongoDB Server"]
+  mobileDevice --> apiServer
+  browser --> apiServer
+  apiServer --> mongodb
+
+%% Sequence Diagram: Wallet Payment
+sequenceDiagram
+  participant Student
+  participant Backend
+  participant Payment as "Payment Service"
+  participant MongoDB
+  Student->>Backend: POST /payments/wallet-pay\n(order_items, wallet_pin)
+  Backend->>Payment: validate JWT\nget_current_user
+  Payment->>MongoDB: fetch wallet\nverify PIN\nupdate balance
+  Payment->>MongoDB: create wallet transaction
+  Payment-->>Backend: WalletPaymentResponse
+  Backend-->>Student: 200 OK\nwallet payment result
+
+%% Sequence Diagram: UPI Payment
+sequenceDiagram
+  participant Student
+  participant Backend
+  participant Payment as "Payment Service"
+  participant MongoDB
+  Student->>Backend: POST /payments/upi-pay\n(order_items, upi_id)
+  Backend->>Payment: validate JWT\nget_current_user
+  Payment->>MongoDB: record UPI payment document
+  Payment-->>Backend: UPIPaymentResponse
+  Backend-->>Student: 200 OK\nUPI payment result
+
+%% Sequence Diagram: QR Verification
+sequenceDiagram
+  participant Scanner as "QR Scanner / POS"
+  participant Backend
+  participant QR as "QR Service"
+  participant MongoDB
+  Scanner->>Backend: POST /qr/verify\n(data)
+  Backend->>QR: parse QR payload\nfetch order
+  QR->>MongoDB: update order status to completed
+  QR-->>Backend: verification result
+  Backend-->>Scanner: 200 OK\nQR verify response
+
+%% Sequence Diagram: Order Placement
+sequenceDiagram
+  participant Student
+  participant Backend
+  participant OrderService as "Order Service"
+  participant MongoDB
+  Student->>Backend: POST /orders\n(items, total_amount, payment_method)
+  Backend->>OrderService: validate JWT\nget_current_user
+  OrderService->>MongoDB: build order items\ncalculate totals
+  OrderService->>MongoDB: insert order document
+  OrderService-->>Backend: OrderResponse
+  Backend-->>Student: 201 Created\norder details

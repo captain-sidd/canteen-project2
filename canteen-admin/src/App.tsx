@@ -13,6 +13,8 @@ import InventoryManagement from '@/pages/inventory/InventoryManagement';
 import WalletDashboard from '@/pages/wallet/WalletDashboard';
 import Users from '@/pages/Users';
 import ReportsAnalytics from '@/pages/reports/ReportsAnalytics';
+import Profile from '@/pages/profile/Profile';
+import Settings from '@/pages/settings/Settings';
 import { Toaster } from 'sonner';
 
 const queryClient = new QueryClient({
@@ -26,10 +28,17 @@ const queryClient = new QueryClient({
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, loading } = useAuth();
-  
-  if (loading) return <div>Loading...</div>;
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 text-slate-600">
+        Loading session...
+      </div>
+    );
+  }
+
   if (!isAuthenticated) return <Navigate to="/login" replace />;
-  
+
   return <>{children}</>;
 }
 
@@ -43,6 +52,7 @@ function App() {
             
             <Route path="/" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
               <Route index element={<Dashboard />} />
+              <Route path="profile" element={<Profile />} />
               <Route path="orders" element={<LiveOrders />} />
               <Route path="qr" element={<QRVerification />} />
               <Route path="menu" element={<MenuManagement />} />
@@ -52,7 +62,7 @@ function App() {
               <Route path="users" element={<Users />} />
               <Route path="wallet" element={<WalletDashboard />} />
               <Route path="reports" element={<ReportsAnalytics />} />
-              <Route path="settings" element={<div className="p-8">Settings Placeholder</div>} />
+              <Route path="settings" element={<Settings />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Route>
           </Routes>

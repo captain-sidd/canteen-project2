@@ -59,16 +59,17 @@ const mapMenuItem = (item: any): MenuItemInterface => ({
 const normalizeMenuPayload = (payload: any) => ({
   name: payload.name,
   description: payload.description ?? payload.name,
-  price: payload.price,
+  price: Number(payload.price),
   category: payload.categoryName || payload.categoryId || 'Uncategorized',
-  image_url: payload.imageUrl,
-  discount_price: payload.offerPrice,
+  image_url: payload.imageUrl || undefined,
+  discount_price: payload.offerPrice == null ? undefined : Number(payload.offerPrice),
   is_available: payload.inStock,
   is_veg: payload.dietType === 'veg',
   is_featured: payload.isFeatured,
   is_trending: payload.isTrending,
-  preparation_time: payload.prepTimeMins,
-  stock_quantity: payload.stockQuantity,
+  is_special: payload.isSpecial,
+  preparation_time: payload.prepTimeMins == null ? undefined : Number(payload.prepTimeMins),
+  stock_quantity: payload.stockQuantity == null ? undefined : Number(payload.stockQuantity),
 });
 
 const mapCombo = (combo: any) => ({
@@ -98,15 +99,16 @@ const normalizeComboPayload = (payload: any) => ({
   description: payload.description,
   items: (payload.items || []).map((item: any) => ({
     menu_item_id: item.menuItemId,
-    quantity: item.quantity,
+    quantity: Number(item.quantity),
   })),
-  combo_price: payload.comboPrice,
-  original_price: payload.originalTotal,
-  discount_percentage: payload.savingsPercentage,
-  image_url: payload.imageUrl,
+  combo_price: Number(payload.comboPrice),
+  original_price: payload.originalTotal == null || payload.originalTotal === 0 ? undefined : Number(payload.originalTotal),
+  discount_percentage: payload.savingsPercentage == null ? undefined : Number(payload.savingsPercentage),
+  image_url: payload.imageUrl || undefined,
   is_available: payload.isActive,
   is_featured: payload.isFeatured,
   is_trending: payload.isTrending,
+  is_special: payload.isSpecial,
 });
 
 const mapWalletTransaction = (txn: any, currentUserName: string = 'You'): TransactionInterface => ({

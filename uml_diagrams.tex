@@ -1,0 +1,138 @@
+% UML Diagrams for Canteen Ordering System
+% This file contains TikZ diagrams for use in LaTeX.
+\section{UML Diagrams}
+\subsection{TikZ Use Case Diagram}
+\begin{tikzpicture}[every node/.style={draw, rounded corners, align=center, font=\small},
+  actor/.style={rectangle, draw, fill=gray!10, rounded corners, minimum width=2.8cm, minimum height=1cm},
+  usecase/.style={ellipse, draw, minimum width=3.6cm, minimum height=1cm},
+  line/.style={-latex, thick}]
+  \node[actor] (student) {Student User};
+  \node[actor, below=4cm of student] (admin) {Admin User};
+
+  \node[usecase, right=3.5cm of student] (browse) {Browse Menu / Combos};
+  \node[usecase, below=1cm of browse] (order) {Place Order};
+  \node[usecase, below=1cm of order] (wallet) {Wallet Top-up / Payment};
+  \node[usecase, below=1cm of wallet] (qr) {Show QR / Order Pickup};
+  \node[usecase, right=3.5cm of admin] (manage) {Manage Menu, Combos, Inventory};
+  \node[usecase, below=1cm of manage] (dashboard) {Monitor Orders \\ & Payments};
+
+  \draw[line] (student) -- (browse);
+  \draw[line] (student) -- (order);
+  \draw[line] (student) -- (wallet);
+  \draw[line] (student) -- (qr);
+  \draw[line] (admin) -- (manage);
+  \draw[line] (admin) -- (dashboard);
+  \draw[line] (admin) -- (order);
+\end{tikzpicture}
+
+\subsection{TikZ Class Diagram}
+\begin{tikzpicture}[every node/.style={draw, rectangle, rounded corners, align=left, font=\footnotesize}, node distance=2cm]
+  \node (user) {\textbf{UserResponse}\\- id: str\\- email: EmailStr\\- role: UserRole};
+  \node[right=3cm of user] (menu) {\textbf{MenuItemResponse}\\- id: str\\- name: str\\- price: float\\- category: str\\- is_available: bool};
+  \node[below=1cm of menu] (combo) {\textbf{ComboResponse}\\- id: str\\- name: str\\- items: list[ComboItem]\\- combo_price: float};
+  \node[below=1cm of user] (order) {\textbf{OrderResponse}\\- id: str\\- user_id: str\\- items: list[OrderItemResponse]\\- total_amount: float\\- payment_method: PaymentMethod\\- status: OrderStatus};
+  \node[right=3cm of order] (wallet) {\textbf{WalletDetailsResponse}\\- balance: float\\- is_wallet_active: bool\\- wallet_id: str};
+  \node[right=3cm of wallet] (payment) {\textbf{WalletPaymentResponse}\\- payment: PaymentResponse\\- wallet_balance: float\\- wallet_transaction: dict};
+
+  \draw[->] (order) -- (user) node[midway, above]{belongs to};
+  \draw[->] (order) -- (menu) node[midway, right]{references};
+  \draw[->] (combo) -- (menu) node[midway, right]{contains};
+  \draw[->] (payment) -- (order) node[midway, below]{pays for};
+  \draw[->] (wallet) -- (user) node[midway, above]{owned by};
+\end{tikzpicture}
+
+\subsection{TikZ Component Diagram}
+\begin{tikzpicture}[every node/.style={draw, rounded corners, align=center, font=\small, minimum width=3.4cm, minimum height=1cm}, component/.style={rectangle, draw, fill=blue!10}]
+  \node[component] (mobile) {Student Mobile App\\(Expo React Native)};
+  \node[component, below=2cm of mobile] (admin) {Admin Dashboard\\(React + TypeScript)};
+  \node[component, right=4cm of mobile] (backend) {Backend Service\\(FastAPI)};
+  \node[component, right=4cm of backend] (db) {MongoDB};
+
+  \draw[->, thick] (mobile) -- node[midway, above]{REST /api/*} (backend);
+  \draw[->, thick] (admin) -- node[midway, below]{REST /api/*} (backend);
+  \draw[->, thick] (backend) -- node[midway, above]{MongoDB driver} (db);
+\end{tikzpicture}
+
+\subsection{TikZ Deployment Diagram}
+\begin{tikzpicture}[every node/.style={draw, rectangle, rounded corners, align=center, font=\small, minimum width=3.4cm}, node distance=3cm]
+  \node (mobileDevice) {Mobile Device / Emulator};
+  \node[right=3.5cm of mobileDevice] (apiServer) {API Server\\(FastAPI)};
+  \node[right=3.5cm of apiServer] (mongodb) {MongoDB Server};
+  \node[below=2.5cm of mobileDevice] (browser) {Browser};
+
+  \draw[->, thick] (mobileDevice) -- node[midway, above]{HTTPS / API Requests} (apiServer);
+  \draw[->, thick] (browser) -- node[midway, below]{HTTPS / API Requests} (apiServer);
+  \draw[->, thick] (apiServer) -- node[midway, above]{MongoDB TCP} (mongodb);
+\end{tikzpicture}
+
+\subsection{TikZ Sequence Diagrams}
+\subsubsection{Wallet Payment}
+\begin{tikzpicture}[font=\small, every node/.style={font=\small}, align=center]
+  \node at (0,0) (student) {Student App};
+  \node at (4,0) (backend) {Backend API};
+  \node at (8,0) (payment) {Payment Service};
+  \node at (12,0) (db) {MongoDB};
+
+  \draw[->, thick] (student) -- node[above]{POST /payments/wallet-pay\\(order_items, wallet_pin)} (backend);
+  \draw[->, thick] (backend) -- node[above]{validate JWT, get_current_user} (payment);
+  \draw[->, thick] (payment) -- node[above]{fetch wallet, verify wallet PIN} (db);
+  \draw[->, thick] (payment) -- node[above]{create wallet transaction, update balance} (db);
+  \draw[->, thick] (payment) -- node[above]{return WalletPaymentResponse} (backend);
+  \draw[->, thick] (backend) -- node[above]{200 OK, wallet payment result} (student);
+\end{tikzpicture}
+
+\subsubsection{UPI Payment}
+\begin{tikzpicture}[font=\small, every node/.style={font=\small}, align=center]
+  \node at (0,0) (student) {Student App};
+  \node at (4,0) (backend) {Backend API};
+  \node at (8,0) (payment) {Payment Service};
+  \node at (12,0) (db) {MongoDB};
+
+  \draw[->, thick] (student) -- node[above]{POST /payments/upi-pay\\(order_items, upi_id)} (backend);
+  \draw[->, thick] (backend) -- node[above]{validate JWT, get_current_user} (payment);
+  \draw[->, thick] (payment) -- node[above]{record UPI payment document} (db);
+  \draw[->, thick] (payment) -- node[above]{return UPIPaymentResponse} (backend);
+  \draw[->, thick] (backend) -- node[above]{200 OK, UPI payment result} (student);
+\end{tikzpicture}
+
+\subsubsection{QR Verification}
+\begin{tikzpicture}[font=\small, every node/.style={font=\small}, align=center]
+  \node at (0,0) (scanner) {QR Scanner / POS};
+  \node at (4,0) (backend) {Backend API};
+  \node at (8,0) (qr) {QR Service};
+  \node at (12,0) (db) {MongoDB};
+
+  \draw[->, thick] (scanner) -- node[above]{POST /qr/verify\\(data)} (backend);
+  \draw[->, thick] (backend) -- node[above]{parse QR payload, fetch order} (qr);
+  \draw[->, thick] (qr) -- node[above]{update order status to completed} (db);
+  \draw[->, thick] (qr) -- node[above]{return verification result} (backend);
+  \draw[->, thick] (backend) -- node[above]{200 OK, QR verify response} (scanner);
+\end{tikzpicture}
+
+\subsubsection{Order Placement}
+\begin{tikzpicture}[font=\small, every node/.style={font=\small}, align=center]
+  \node at (0,0) (student) {Student App};
+  \node at (4,0) (backend) {Backend API};
+  \node at (8,0) (order) {Order Service};
+  \node at (12,0) (db) {MongoDB};
+
+  \draw[->, thick] (student) -- node[above]{POST /orders\\(items, total_amount, payment_method)} (backend);
+  \draw[->, thick] (backend) -- node[above]{validate JWT, get_current_user} (order);
+  \draw[->, thick] (order) -- node[above]{build order items, calculate totals} (db);
+  \draw[->, thick] (order) -- node[above]{insert order document} (db);
+  \draw[->, thick] (order) -- node[above]{return OrderResponse} (backend);
+  \draw[->, thick] (backend) -- node[above]{201 Created, order details} (student);
+\end{tikzpicture}
+
+\subsection{Integration Instructions}
+\begin{itemize}[nosep]
+  \item Add \texttt{\usepackage{tikz}} and \texttt{\usetikzlibrary{positioning}} to the LaTeX preamble.
+  \item Insert diagrams into \texttt{SRS.tex} with \texttt{\input{uml_diagrams.tex}} at the desired location.
+  \item If compiling from a root document, ensure \texttt{uml_diagrams.tex} is in the same directory or update the path accordingly.
+  \item For PlantUML, install PlantUML and render \texttt{uml_diagrams.puml} to SVG/PNG using:\newline
+    \texttt{plantuml -tsvg uml_diagrams.puml}
+  \item Include rendered PlantUML images in LaTeX with \texttt{\includegraphics[width=\linewidth]{uml_diagrams.svg}}.
+  \item For Mermaid, install \texttt{mmdc} and render \texttt{uml_diagrams.mmd} using:\newline
+    \texttt{mmdc -i uml_diagrams.mmd -o uml_diagrams.svg}
+  \item Use \texttt{\usepackage{graphicx}} in LaTeX and include Mermaid output with \texttt{\includegraphics[width=\linewidth]{uml_diagrams.svg}}.
+\end{itemize}

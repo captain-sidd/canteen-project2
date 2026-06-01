@@ -1,0 +1,239 @@
+\subsection{Authentication}
+\begin{longtable}{p{3.2cm} p{1.7cm} p{2.2cm} p{3.6cm} p{3.6cm} p{1.8cm} p{1.8cm}}
+\toprule
+Route & Method & Auth & Request Schema & Response Schema & Success & Error \\
+\midrule
+\endfirsthead
+\toprule
+Route & Method & Auth & Request Schema & Response Schema & Success & Error \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+
+/api/auth/register & POST & No & \texttt{RegisterRequest} & \texttt{TokenResponse} & 201 Created & 400 Bad Request, 409 Conflict (duplicate email), 422 Validation Error \\
+
+/api/auth/login & POST & No & \texttt{LoginRequest} & \texttt{TokenResponse} & 200 OK & 401 Unauthorized (incorrect credentials), 422 Validation Error \\
+
+/api/auth/me & GET & Yes & None & \texttt{UserResponse} & 200 OK & 401 Unauthorized, 403 Forbidden, 422 Validation Error \\
+\end{longtable}
+
+\subsection{Profile}
+\begin{longtable}{p{3.2cm} p{1.7cm} p{2.2cm} p{3.6cm} p{3.6cm} p{1.8cm} p{1.8cm}}
+\toprule
+Route & Method & Auth & Request Schema & Response Schema & Success & Error \\
+\midrule
+\endfirsthead
+\toprule
+Route & Method & Auth & Request Schema & Response Schema & Success & Error \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+
+/api/profile & GET & Yes & None & \texttt{UserResponse} & 200 OK & 401 Unauthorized, 403 Forbidden \\
+
+/api/profile & PUT & Yes & \texttt{UserUpdate} & \texttt{UserResponse} & 200 OK & 400 Bad Request (no fields), 401 Unauthorized, 403 Forbidden, 404 Not Found, 422 Validation Error \\
+\end{longtable}
+
+\subsection{Menu}
+\begin{longtable}{p{3.2cm} p{1.7cm} p{2.2cm} p{3.6cm} p{3.6cm} p{1.8cm} p{1.8cm}}
+\toprule
+Route & Method & Auth & Request Schema & Response Schema & Success & Error \\
+\midrule
+\endfirsthead
+\toprule
+Route & Method & Auth & Request Schema & Response Schema & Success & Error \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+
+/api/menu & POST & Yes & \texttt{MenuItemCreate} & \texttt{MenuItemResponse} & 201 Created & 401 Unauthorized, 403 Forbidden, 422 Validation Error \\
+
+/api/menu & GET & No & query params: \texttt{category}, \texttt{available\_only}, \texttt{veg}, \texttt{trending}, \texttt{special}, \texttt{featured}, \texttt{sort\_by} & list[\texttt{MenuItemResponse}] & 200 OK & 422 Validation Error \\
+
+/api/menu/trending & GET & No & query param: \texttt{limit} & list[\texttt{MenuItemResponse}] & 200 OK & 422 Validation Error \\
+
+/api/menu/specials & GET & No & query param: \texttt{limit} & list[\texttt{MenuItemResponse}] & 200 OK & 422 Validation Error \\
+
+/api/menu/featured & GET & No & query param: \texttt{limit} & list[\texttt{MenuItemResponse}] & 200 OK & 422 Validation Error \\
+
+/api/menu/\{item\_id\} & GET & No & Path param \texttt{item\_id} & \texttt{MenuItemResponse} & 200 OK & 404 Not Found, 422 Validation Error \\
+
+/api/menu/\{item\_id\} & PATCH & Yes & \texttt{MenuItemUpdate} & \texttt{MenuItemResponse} & 200 OK & 401 Unauthorized, 403 Forbidden, 404 Not Found, 422 Validation Error \\
+
+/api/menu/\{item\_id\} & DELETE & Yes & None & None & 204 No Content & 401 Unauthorized, 403 Forbidden, 404 Not Found \\
+\end{longtable}
+
+\subsection{Combos}
+\begin{longtable}{p{3.2cm} p{1.7cm} p{2.2cm} p{3.6cm} p{3.6cm} p{1.8cm} p{1.8cm}}
+\toprule
+Route & Method & Auth & Request Schema & Response Schema & Success & Error \\
+\midrule
+\endfirsthead
+\toprule
+Route & Method & Auth & Request Schema & Response Schema & Success & Error \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+
+/api/combos & POST & Yes & \texttt{ComboCreate} & \texttt{ComboResponse} & 201 Created & 401 Unauthorized, 403 Forbidden, 422 Validation Error \\
+
+/api/combos & GET & No & query params: \texttt{page}, \texttt{limit}, \texttt{search} & dict{items:list[\texttt{ComboResponse}], hasMore:bool, total:int} & 200 OK & 422 Validation Error \\
+
+/api/combos/featured & GET & No & query param: \texttt{limit} & list[\texttt{ComboResponse}] & 200 OK & 422 Validation Error \\
+
+/api/combos/trending & GET & No & query param: \texttt{limit} & list[\texttt{ComboResponse}] & 200 OK & 422 Validation Error \\
+
+/api/combos/\{combo\_id\} & GET & No & Path param \texttt{combo\_id} & \texttt{ComboResponse} & 200 OK & 404 Not Found, 422 Validation Error \\
+
+/api/combos/\{combo\_id\} & PATCH & Yes & \texttt{ComboUpdate} & \texttt{ComboResponse} & 200 OK & 401 Unauthorized, 403 Forbidden, 404 Not Found, 422 Validation Error \\
+
+/api/combos/\{combo\_id\} & DELETE & Yes & None & None & 204 No Content & 401 Unauthorized, 403 Forbidden, 404 Not Found \\
+\end{longtable}
+
+\subsection{Orders}
+\begin{longtable}{p{3.2cm} p{1.7cm} p{2.2cm} p{3.6cm} p{3.6cm} p{1.8cm} p{1.8cm}}
+\toprule
+Route & Method & Auth & Request Schema & Response Schema & Success & Error \\
+\midrule
+\endfirsthead
+\toprule
+Route & Method & Auth & Request Schema & Response Schema & Success & Error \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+
+/api/orders & POST & Yes & \texttt{OrderCreate} & \texttt{OrderResponse} & 201 Created & 401 Unauthorized, 403 Forbidden, 422 Validation Error \\
+
+/api/orders & GET & Yes & None & list[\texttt{OrderResponse}] & 200 OK & 401 Unauthorized, 403 Forbidden \\
+
+/api/orders/all & GET & Yes & None & list[\texttt{OrderResponse}] & 200 OK & 401 Unauthorized, 403 Forbidden \\
+
+/api/orders/\{order\_id\} & GET & Yes & Path param \texttt{order\_id} & \texttt{OrderResponse} & 200 OK & 401 Unauthorized, 403 Forbidden, 404 Not Found, 422 Validation Error \\
+
+/api/orders/\{order\_id\}/status & GET & Yes & Path param \texttt{order\_id} & \texttt{object\{order\_id,status,order\_status,estimated\_ready\_time,updated\_at\}} & 200 OK & 401 Unauthorized, 403 Forbidden, 404 Not Found, 422 Validation Error \\
+
+/api/orders/\{order\_id\}/status & PATCH & Yes & \texttt{OrderUpdateStatus} & \texttt{OrderResponse} & 200 OK & 401 Unauthorized, 403 Forbidden, 404 Not Found, 422 Validation Error \\
+\end{longtable}
+
+\subsection{Checkout}
+\begin{longtable}{p{3.2cm} p{1.7cm} p{2.2cm} p{3.6cm} p{3.6cm} p{1.8cm} p{1.8cm}}
+\toprule
+Route & Method & Auth & Request Schema & Response Schema & Success & Error \\
+\midrule
+\endfirsthead
+\toprule
+Route & Method & Auth & Request Schema & Response Schema & Success & Error \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+
+/api/checkout/summary & POST & Yes & \texttt{CheckoutSummaryRequest} & \texttt{CheckoutSummaryResponse} & 200 OK & 401 Unauthorized, 403 Forbidden, 422 Validation Error \\
+\end{longtable}
+
+\subsection{Wallet}
+\begin{longtable}{p{3.2cm} p{1.7cm} p{2.2cm} p{3.6cm} p{3.6cm} p{1.8cm} p{1.8cm}}
+\toprule
+Route & Method & Auth & Request Schema & Response Schema & Success & Error \\
+\midrule
+\endfirsthead
+\toprule
+Route & Method & Auth & Request Schema & Response Schema & Success & Error \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+
+/api/wallet & GET & Yes & None & \texttt{WalletDetailsResponse} & 200 OK & 401 Unauthorized, 403 Forbidden \\
+
+/api/wallet/history & GET & Yes & query params: \texttt{page}, \texttt{limit} & \texttt{object\{items:list, page:int, limit:int, total:int, has\_more:bool\}} & 200 OK & 401 Unauthorized, 403 Forbidden, 422 Validation Error \\
+
+/api/wallet/set-pin & POST & Yes & \texttt{WalletPinRequest} & object{success, message} & 200 OK & 401 Unauthorized, 403 Forbidden, 422 Validation Error \\
+
+/api/wallet/change-pin & PUT & Yes & \texttt{WalletPinChangeRequest} & object{success, message} & 200 OK & 401 Unauthorized, 403 Forbidden, 422 Validation Error \\
+
+/api/wallet/add & POST & Yes & \texttt{WalletTopUpRequest} & \texttt{object\{balance, wallet\_id\}} & 200 OK & 401 Unauthorized, 403 Forbidden, 422 Validation Error \\
+\end{longtable}
+
+\subsection{Payments}
+\begin{longtable}{p{3.2cm} p{1.7cm} p{2.2cm} p{3.6cm} p{3.6cm} p{1.8cm} p{1.8cm}}
+\toprule
+Route & Method & Auth & Request Schema & Response Schema & Success & Error \\
+\midrule
+\endfirsthead
+\toprule
+Route & Method & Auth & Request Schema & Response Schema & Success & Error \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+
+/api/payments/wallet-pay & POST & Yes & \texttt{WalletPaymentRequest} & \texttt{WalletPaymentResponse} & 201 Created & 401 Unauthorized, 403 Forbidden, 422 Validation Error, 400 Bad Request \\
+
+/api/payments/upi-pay & POST & Yes & \texttt{UPIPaymentRequest} & \texttt{UPIPaymentResponse} & 201 Created & 401 Unauthorized, 403 Forbidden, 422 Validation Error, 400 Bad Request \\
+
+/api/payments/history & GET & Yes & query params: \texttt{page}, \texttt{limit} & \texttt{PaymentHistoryResponse} & 200 OK & 401 Unauthorized, 403 Forbidden, 422 Validation Error \\
+\end{longtable}
+
+\subsection{QR}
+\begin{longtable}{p{3.2cm} p{1.7cm} p{2.2cm} p{3.6cm} p{3.6cm} p{1.8cm} p{1.8cm}}
+\toprule
+Route & Method & Auth & Request Schema & Response Schema & Success & Error \\
+\midrule
+\endfirsthead
+\toprule
+Route & Method & Auth & Request Schema & Response Schema & Success & Error \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+
+/api/qr/orders/\{order\_id\} & GET & Yes & Path param \texttt{order\_id} & \texttt{QRCodeResponse} & 200 OK & 401 Unauthorized, 403 Forbidden, 404 Not Found, 422 Validation Error \\
+
+/api/qr/verify & POST & Yes & \texttt{QRVerifyRequest} & \texttt{QRVerifyResponse} & 200 OK & 401 Unauthorized, 403 Forbidden, 404 Not Found, 422 Validation Error \\
+\end{longtable}
+
+\subsection{Inventory}
+\begin{longtable}{p{3.2cm} p{1.7cm} p{2.2cm} p{3.6cm} p{3.6cm} p{1.8cm} p{1.8cm}}
+\toprule
+Route & Method & Auth & Request Schema & Response Schema & Success & Error \\
+\midrule
+\endfirsthead
+\toprule
+Route & Method & Auth & Request Schema & Response Schema & Success & Error \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+
+/api/inventory & POST & Yes & \texttt{InventoryCreate} & \texttt{InventoryResponse} & 201 Created & 400 Bad Request (duplicate item code), 401 Unauthorized, 403 Forbidden, 422 Validation Error \\
+
+/api/inventory & GET & Yes & query params: \texttt{page}, \texttt{limit}, \texttt{search} & \texttt{PaginatedInventoryResponse} & 200 OK & 401 Unauthorized, 403 Forbidden, 422 Validation Error \\
+
+/api/inventory/\{id\} & GET & Yes & Path param \texttt{id} & \texttt{InventoryResponse} & 200 OK & 400 Bad Request (invalid ID), 401 Unauthorized, 403 Forbidden, 404 Not Found, 422 Validation Error \\
+
+/api/inventory/\{id\} & PATCH & Yes & \texttt{InventoryUpdate} & \texttt{InventoryResponse} & 200 OK & 400 Bad Request (invalid ID or duplicate code), 401 Unauthorized, 403 Forbidden, 404 Not Found, 422 Validation Error \\
+
+/api/inventory/\{id\} & DELETE & Yes & None & None & 204 No Content & 400 Bad Request (invalid ID), 401 Unauthorized, 403 Forbidden, 404 Not Found \\
+\end{longtable}
+
+\subsection{Users}
+\begin{longtable}{p{3.2cm} p{1.7cm} p{2.2cm} p{3.6cm} p{3.6cm} p{1.8cm} p{1.8cm}}
+\toprule
+Route & Method & Auth & Request Schema & Response Schema & Success & Error \\
+\midrule
+\endfirsthead
+\toprule
+Route & Method & Auth & Request Schema & Response Schema & Success & Error \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+
+/api/users & GET & Yes & None & list[\texttt{UserResponse}] & 200 OK & 401 Unauthorized, 403 Forbidden \\
+\end{longtable}

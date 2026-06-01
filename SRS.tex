@@ -1,0 +1,227 @@
+% Software Requirements Specification for Canteen Ordering System
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{hyperref}
+\usepackage{url}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{tikz}
+\usetikzlibrary{positioning}
+\usepackage{graphicx}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\titleformat{\section}{\normalfont\Large\bfseries}{\thesection}{1em}{}
+\titleformat{\subsection}{\normalfont\large\bfseries}{\thesubsection}{1em}{}
+\title{Software Requirements Specification}
+\author{Canteen Ordering and Management System}
+\date{\today}
+
+\begin{document}
+\maketitle
+\pagenumbering{roman}
+\tableofcontents
+\newpage
+\pagenumbering{arabic}
+
+\section{Introduction}
+\subsection{Purpose}
+This document defines the software requirements for the Canteen Ordering and Management System implemented in the provided repository. It is derived directly from the actual implementation of the mobile student application, the admin dashboard, and the FastAPI backend with MongoDB.
+
+\subsection{Scope}
+The system supports student-facing ordering, wallet-based and UPI payments, QR-based order verification, and administrative management of menu items, combos, inventory, orders, users, and wallet transactions.
+
+\subsection{Definitions, Acronyms, and Abbreviations}
+\begin{itemize}[nosep]
+  \item JWT: JSON Web Token
+  \item API: Application Programming Interface
+  \item UPI: Unified Payments Interface
+  \item UI: User Interface
+  \item CRUD: Create, Read, Update, Delete
+  \item RN: React Native
+\end{itemize}
+
+\subsection{References}
+\begin{itemize}[nosep]
+  \item \cite{fastapi}
+  \item \cite{reactnative}
+  \item \cite{mongodb}
+  \item \cite{expo}
+  \item \cite{typescript}
+\end{itemize}
+
+\subsection{Overview}
+This SRS document describes the product perspective, system features, external interface requirements, and quality attributes of the implemented application. The system is divided into:
+\begin{itemize}[nosep]
+  \item Mobile student app built with Expo React Native.
+  \item Admin dashboard built with React, TypeScript, Vite, and Tailwind.
+  \item Backend implemented in FastAPI and MongoDB.
+\end{itemize}
+
+\section{Overall Description}
+\subsection{Product Perspective}
+The system is a three-tier architecture:
+\begin{itemize}[nosep]
+  \item Mobile client (\texttt{canteen-frontend}): student-facing ordering and wallet experience.
+  \item Admin dashboard (\texttt{canteen-admin}): menu management, order management, inventory, and analytics.
+  \item Backend service (\texttt{canteen-backend}): REST API, authentication, persistence, business logic, and QR verification.
+\end{itemize}
+
+\subsection{Product Functions}
+Key implemented functions include:
+\begin{itemize}[nosep]
+  \item User authentication and session management via JWT tokens.
+  \item Menu browsing with filtering, trending, featured, and specials endpoints.
+  \item Combo browsing and management.
+  \item Cart management and order creation.
+  \item Wallet balance retrieval, history, PIN setup/change, and top-up.
+  \item Checkout summary calculation.
+  \item Payment processing for wallet and UPI.
+  \item QR code generation and verification for order pickup.
+  \item Admin order status updates and live order management.
+  \item Admin CRUD operations for menu items, combos, and inventory.
+\end{itemize}
+
+\subsection{User Characteristics}
+The system targets two user roles:
+\begin{itemize}[nosep]
+  \item Student users: authenticate, browse food, place orders, pay, view orders, and show QR codes.
+  \item Admin users: authenticate to dashboard, manage orders, control menu/combo inventory, and monitor payments.
+\end{itemize}
+
+\subsection{Constraints}
+The actual implementation includes the following constraints:
+\begin{itemize}[nosep]
+  \item Backend uses FastAPI with CORS configured to allow all origins for development.
+  \item Mobile app uses a hard-coded backend base URL: \texttt{http://192.168.0.149:8000/api}.
+  \item Authentication depends on JWT bearer tokens stored locally in AsyncStorage or localStorage.
+  \item Admin RBAC is currently supported in dependencies but a demo fallback token \texttt{mock-jwt-token} is accepted.
+\end{itemize}
+
+\subsection{Assumptions and Dependencies}
+The implementation depends on:
+\begin{itemize}[nosep]
+  \item MongoDB as the primary persistence layer.
+  \item FastAPI backend hosted at the configured API base URL.
+  \item Expo React Native runtime for the mobile client.
+  \item React and Vite build chain for the admin dashboard.
+\end{itemize}
+
+\section{Specific Requirements}
+\subsection{External Interface Requirements}
+\subsubsection{User Interfaces}
+The system supports two user interfaces:
+\begin{itemize}[nosep]
+  \item Student mobile UI implemented in \texttt{canteen-frontend/src/screens}, including \texttt{LoginScreen.js}, \texttt{MenuScreen.js}, \texttt{OrdersScreen.js}, and \texttt{QRScreen.js}.
+  \item Admin web UI implemented in \texttt{canteen-admin/src/pages}, including \texttt{Login.tsx}, \texttt{LiveOrders.tsx}, \texttt{MenuManagement.tsx}, \texttt{ComboManagement.tsx}, \texttt{InventoryManagement.tsx}, \texttt{WalletDashboard.tsx}, and \texttt{ReportsAnalytics.tsx}.
+\end{itemize}
+
+\subsubsection{Hardware Interfaces}
+The system assumes standard mobile device and web browser hardware. No specialized hardware interfaces are coded in the repository.
+
+\subsubsection{Software Interfaces}
+The backend exposes RESTful JSON endpoints documented in Section \ref{sec:api-reference}. The mobile and admin clients consume these APIs via Axios.
+
+\subsubsection{Communications Interfaces}
+All communication between clients and backend occurs over HTTP/HTTPS using bearer token authorization. The mobile app stores the JWT in AsyncStorage and attaches it to the \texttt{Authorization} header. The admin dashboard stores the token in localStorage.
+
+\subsection{System Features}
+\subsubsection{Authentication and Authorization}
+\begin{itemize}[nosep]
+  \item \textbf{Login}: \texttt{POST /api/auth/login} accepts credentials and returns a JWT token and user payload.
+  \item \textbf{Registration}: \texttt{POST /api/auth/register} creates a new user.
+  \item \textbf{Current user}: \texttt{GET /api/auth/me} returns authenticated user details.
+  \item \textbf{Protected routes}: backend dependencies \texttt{get\_current\_user} and \texttt{get\_current\_admin} enforce JWT authentication.
+\end{itemize}
+
+\subsubsection{Menu Management}
+\begin{itemize}[nosep]
+  \item \texttt{GET /api/menu} lists menu items with optional filters for category, availability, vegetarian, trending, special, featured, and sorting.
+  \item \texttt{GET /api/menu/trending}, \texttt{/menu/specials}, \texttt{/menu/featured} provide curated lists.
+  \item \texttt{POST /api/menu}, \texttt{PATCH /api/menu/\{item\_id\}}, and \texttt{DELETE /api/menu/\{item\_id\}} allow admin CRUD operations.
+\end{itemize}
+
+\subsubsection{Combo Management}
+\begin{itemize}[nosep]
+  \item \texttt{GET /api/combos} returns combo bundles with pagination support.
+  \item \texttt{GET /api/combos/trending}, \texttt{/api/combos/featured} highlight promotional bundles.
+  \item \texttt{POST /api/combos}, \texttt{PATCH /api/combos/\{combo\_id\}}, \texttt{DELETE /api/combos/\{combo\_id\}} support admin combo lifecycle.
+\end{itemize}
+
+\subsubsection{Ordering and Checkout}
+\begin{itemize}[nosep]
+  \item \texttt{POST /api/orders} creates a new order from shopping cart payload.
+  \item \texttt{GET /api/orders} lists the authenticated user's orders.
+  \item \texttt{GET /api/orders/all} returns all orders for administrative review.
+  \item \texttt{GET /api/orders/\{order\_id\}} retrieves order details.
+  \item \texttt{GET /api/orders/\{order\_id\}/status} retrieves order status.
+  \item \texttt{PATCH /api/orders/\{order\_id\}/status} updates order status.
+  \item \texttt{POST /api/checkout/summary} computes checkout summaries and offerable totals.
+\end{itemize}
+
+\subsubsection{Wallet and Payment}
+\begin{itemize}[nosep]
+  \item \texttt{GET /api/wallet} retrieves wallet details.
+  \item \texttt{GET /api/wallet/history} returns wallet transaction history.
+  \item \texttt{POST /api/wallet/set-pin} and \texttt{PUT /api/wallet/change-pin} manage wallet PINs.
+  \item \texttt{POST /api/wallet/add} adds balance to the wallet.
+  \item \texttt{POST /api/payments/wallet-pay} processes wallet payments.
+  \item \texttt{POST /api/payments/upi-pay} processes UPI payments.
+  \item \texttt{GET /api/payments/history} returns the payment transaction history.
+\end{itemize}
+
+\subsubsection{Profile Management}
+\begin{itemize}[nosep]
+  \item \texttt{GET /api/profile} returns the current user's profile.
+  \item \texttt{PUT /api/profile} updates user details.
+\end{itemize}
+
+\subsubsection{QR Order Verification}
+\begin{itemize}[nosep]
+  \item \texttt{GET /api/qr/orders/\{order\_id\}} generates QR payload for an order.
+  \item \texttt{POST /api/qr/verify} validates QR data and returns order verification details.
+\end{itemize}
+
+\subsubsection{Inventory Management}
+\begin{itemize}[nosep]
+  \item \texttt{POST /api/inventory} creates inventory records.
+  \item \texttt{GET /api/inventory} lists inventory items with pagination and search.
+  \item \texttt{GET /api/inventory/\{id\}} retrieves a single inventory item.
+  \item \texttt{PATCH /api/inventory/\{id\}} updates inventory stock.
+  \item \texttt{DELETE /api/inventory/\{id\}} removes inventory records.
+\end{itemize}
+
+\subsection{Performance Requirements}
+The system uses pagination on menu, combo, order, wallet history, and inventory endpoints to keep responses efficient. Client-side request timeouts are set to 10 seconds in the mobile app.
+
+\subsection{Design Constraints}
+\begin{itemize}[nosep]
+  \item Backend architecture is implemented in Python/FastAPI with MongoDB.
+  \item Mobile UI uses Expo-managed React Native and AsyncStorage.
+  \item Admin dashboard is TypeScript-based and uses React Query for data fetching.
+\end{itemize}
+
+\subsection{Software System Attributes}
+\begin{itemize}[nosep]
+  \item \textbf{Security}: JWT authentication with bearer token header, and role-aware access control via backend dependencies.
+  \item \textbf{Usability}: student app supports search, filters, and progressive loading states.
+  \item \textbf{Maintainability}: separation of frontend service modules, admin API wrappers, and backend routers/services.
+\end{itemize}
+
+\subsection{Other Requirements}
+The backend includes a health endpoint \texttt{GET /health} for basic availability checks.
+
+\section{API Reference}
+\label{sec:api-reference}
+\input{api_reference.tex}
+
+\section{System Architecture}
+\label{sec:architecture}
+\input{architecture.tex}
+
+\section{Use Cases}
+\label{sec:usecases}
+\input{usecases.tex}
+
+\bibliographystyle{plain}
+\bibliography{references}
+\end{document}

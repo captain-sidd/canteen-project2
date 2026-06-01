@@ -1,0 +1,209 @@
+% Project report generated from the actual canteen_test implementation
+\documentclass[12pt,a4paper]{report}
+\usepackage[margin=1in]{geometry}
+\usepackage{hyperref}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{longtable}
+\usepackage{booktabs}
+\usepackage{setspace}
+\onehalfspacing
+
+\title{Canteen Management System: Project Report}
+\author{Generated from Actual Codebase Implementation}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+\tableofcontents
+\clearpage
+
+\chapter{Introduction}
+\section{Purpose}
+The purpose of this project report is to present a comprehensive description of the Canteen Management System built from the actual source code in the repository. This report is based directly on the implementation found in the workspace folders: \texttt{canteen-backend}, \texttt{canteen-frontend}, and \texttt{canteen-admin}.
+
+\section{Scope}
+The system provides a full-stack digital canteen solution with the following capabilities:
+\begin{itemize}
+  \item Mobile customer application for browsing menu items, combos, wallet management, and placing orders.
+  \item Backend REST API services for authentication, menu management, order processing, wallet operations, QR-based order verification, and admin workflows.
+  \item Admin dashboard for staff and management, implemented using React, React Query, Tailwind-style UI, and client-side authentication.
+  \item MongoDB persistence, JWT-based authentication, and modular backend architecture.
+\end{itemize}
+
+\section{Objectives}
+The primary objectives of the system are:
+\begin{enumerate}
+  \item Digitize canteen ordering and payment workflows.
+  \item Provide a responsive mobile experience for students and staff.
+  \item Support order tracking, QR-based verification, and wallet transactions.
+  \item Enable administrative control over menu, combos, inventory, and orders.
+\end{enumerate}
+
+\chapter{Literature Survey}
+\section{Background}
+Traditional canteen systems rely on manual order taking, physical menus, and cash payments. Modern digital ordering platforms apply mobile user interfaces, backend APIs, and real-time status updates to reduce wait time and improve order accuracy.
+
+\section{Relevant Technologies}
+The implementation uses the following contemporary technologies:
+\begin{itemize}
+  \item FastAPI for backend REST services and automatic API documentation.
+  \item MongoDB for document-oriented persistence.
+  \item React Native with Expo for mobile application development.
+  \item React + TypeScript + Vite for admin dashboard development.
+  \item JWT authentication and HTTP Bearer token security.
+\end{itemize}
+
+\section{Comparative Context}
+Compared to legacy canteen management software, this repository demonstrates a modern microservice-inspired structure with clear separation of concerns. The codebase emphasizes API modularity in the backend through separate route modules (e.g., \texttt{app/routes/menu.py}, \texttt{app/routes/order.py}, \texttt{app/routes/qr.py}) and separate frontend screens for each user flow.
+
+\chapter{System Analysis}
+\section{Stakeholders}
+The main stakeholders are:
+\begin{itemize}
+  \item Canteen customers (students, staff) using the mobile app.
+  \item Canteen managers and staff using the admin dashboard.
+  \item System operators maintaining the backend and database.
+\end{itemize}
+
+\section{Functional Requirements}
+Based on the actual implementation, the system supports the following functional requirements:
+\begin{itemize}
+  \item User registration and login with JWT authentication.
+  \item Retrieve current user profile via \texttt{/api/auth/me}.
+  \item Browse menu items and filter by category, trending, special, featured, and vegetarian attributes.
+  \item View combo offers through \texttt{/api/combos} endpoints.
+  \item Add items to a cart and place orders with \texttt{/api/orders}.
+  \item Track order status using \texttt{/api/orders/{order_id}/status}.
+  \item Generate and verify QR codes for order validation through \texttt{/api/qr}.
+  \item Manage wallet details, set/change wallet PIN, and top up balance using \texttt{/api/wallet}.
+  \item Admin operations such as menu item creation, updates, and inventory control via authenticated backend routes.
+\end{itemize}
+
+\section{Non-Functional Requirements}
+The system also targets the following non-functional properties:
+\begin{itemize}
+  \item Modularity through separate backend route and service modules.
+  \item Extensibility via clearly defined Pydantic schemas and FastAPI dependency injection.
+  \item Maintainability using componentized React and React Native screens.
+  \item Usability with tab navigation, drawer navigation, and contextual wallet/cart flows.
+\end{itemize}
+
+\section{System Context}
+The application consists of three main subsystems:
+\begin{itemize}
+  \item \textbf{Backend API}: hosted by FastAPI in \texttt{canteen-backend/app/main.py}, exposing endpoints under \texttt{/api/*}.
+  \item \textbf{Mobile Frontend}: implemented with Expo React Native in \texttt{canteen-frontend/App.js} and supporting screens under \texttt{canteen-frontend/src/screens}.
+  \item \textbf{Admin Frontend}: implemented in \texttt{canteen-admin} using React Router, React Query, and local storage-based admin state.
+\end{itemize}
+
+\chapter{System Design}
+\section{Architectural Overview}
+The solution follows a client-server architecture with the following design principles:
+\begin{itemize}
+  \item Backend services are organized in route modules, service modules, schema definitions, and database connection utilities.
+  \item The mobile client interacts with backend REST endpoints through an Axios wrapper in \texttt{canteen-frontend/src/services/api.js} and \texttt{apiService.js}.
+  \item Administrative UI uses a dashboard layout with a sidebar and top navigation, controlled by an auth context in \texttt{canteen-admin/src/context/AuthContext.tsx}.
+\end{itemize}
+
+\section{Backend Design}
+The backend implementation includes these key components:
+\begin{itemize}
+  \item \textbf{FastAPI App Initialization}: \texttt{canteen-backend/app/main.py} configures CORS, startup/shutdown events, and router inclusion.
+  \item \textbf{Authentication}: \texttt{canteen-backend/app/routes/auth.py} defines registration and login endpoints, while \texttt{canteen-backend/app/core/dependencies.py} verifies JWT tokens and provides role-based dependencies.
+  \item \textbf{Menu and Combo Services}: \texttt{app/routes/menu.py} and \texttt{app/routes/combo.py} expose item listing, filtering, creation, and update endpoints.
+  \item \textbf{Order Management}: \texttt{app/routes/order.py} handles order placement, retrieval, status checks, and status updates.
+  \item \textbf{QR Verification}: \texttt{app/routes/qr.py} supports generating order QR codes and verifying them to complete orders.
+  \item \textbf{Wallet Management}: \texttt{app/routes/wallet.py} supports wallet details, transaction history, PIN management, and top-up.
+\end{itemize}
+
+\section{Frontend Design}
+The mobile application architecture includes:
+\begin{itemize}
+  \item \textbf{Navigation}: A stack navigator in \texttt{App.js} with bottom tabs for Home, Menu, Cart, Orders, and Wallet, plus drawer navigation for profile and edit screens.
+  \item \textbf{State Management}: A context provider in \texttt{canteen-frontend/src/context/CartContext.js} holds cart items, wallet balance, and user profile state.
+  \item \textbf{API Layer}: \texttt{canteen-frontend/src/services/apiService.js} performs network requests with centralized error handling and response normalization.
+  \item \textbf{Screen Components}: Screens such as \texttt{HomeScreen}, \texttt{MenuScreen}, \texttt{CartScreen}, \texttt{OrdersScreen}, and \texttt{WalletScreen} deliver specific user workflows.
+\end{itemize}
+
+\section{Admin Dashboard Design}
+The admin dashboard uses the following design:
+\begin{itemize}
+  \item \textbf{Routing}: React Router and nested routes under \texttt{DashboardLayout.tsx}.
+  \item \textbf{Authentication}: Admin login state is managed in \texttt{AuthContext.tsx}, persisted to local storage.
+  \item \textbf{UI}: A sidebar and top navigation provide access to inventory, orders, users, and reports.
+  \item \textbf{Data Fetching}: React Query is available via dependencies listed in \texttt{canteen-admin/package.json} and is intended for backend data synchronization.
+\end{itemize}
+
+\chapter{Implementation}
+\section{Backend Implementation}
+The repository demonstrates an implemented backend with the following actual elements:
+\begin{itemize}
+  \item \textbf{Startup and Shutdown}: \texttt{connect_to_mongo} and \texttt{close_mongo_connection} in \texttt{app/database/mongodb.py} are wired to FastAPI lifecycle events.
+  \item \textbf{HTTP Endpoints}: All endpoints are prefixed under \texttt{/api}, such as \texttt{/api/auth}, \texttt{/api/menu}, \texttt{/api/orders}, \texttt{/api/wallet}, and \texttt{/api/qr}.
+  \item \textbf{Data Validation}: Pydantic models in \texttt{canteen-backend/app/schemas} define DTOs like \texttt{RegisterRequest}, \texttt{LoginRequest}, \texttt{OrderCreate}, \texttt{MenuItemCreate}, and \texttt{WalletTopUpRequest}.
+  \item \textbf{Security}: JWT decoding takes place in \texttt{app/core/dependencies.py}, and demo-hardcoded mock JWT support is present for admin dashboard integration.
+\end{itemize}
+
+\section{Mobile Frontend Implementation}
+Key implementation specifics in the mobile app include:
+\begin{itemize}
+  \item \textbf{Root App Component}: \texttt{canteen-frontend/App.js} configures navigation and provides shared state using \texttt{CartContext}.
+  \item \textbf{Screen Flow}: The app presents login/register screens, followed by a tabbed home experience containing menu, cart, orders, and wallet sections.
+  \item \textbf{Device Integration}: The app uses Expo packages such as \texttt{expo-navigation-bar}, \texttt{expo-image}, and \texttt{expo-linear-gradient} for enhanced mobile UI and system navigation styling.
+  \item \textbf{API Integration}: The app calls backend endpoints through Axios wrappers in \texttt{src/services/api.js} and \texttt{src/services/apiService.js}.
+\end{itemize}
+
+\section{Admin Dashboard Implementation}
+Admin implementation details include:
+\begin{itemize}
+  \item \textbf{Auth Persistence}: \texttt{AuthProvider} stores admin token and user data in browser local storage.
+  \item \textbf{Layout}: \texttt{DashboardLayout.tsx} provides a responsive wrapper containing \texttt{Sidebar} and \texttt{TopNavbar} components.
+  \item \textbf{Developer Workflow}: Scripts in \texttt{canteen-admin/package.json} include \texttt{dev}, \texttt{build}, \texttt{lint}, and \texttt{preview}.
+\end{itemize}
+
+\chapter{Testing}
+\section{Observed Testing Artifacts}
+In the inspected codebase, there is no dedicated automated test suite or test directory present. The repository does include developer tooling that supports validation:
+\begin{itemize}
+  \item The frontend and admin projects expose lint scripts via \texttt{npm run lint}.
+  \item The backend exposes a health endpoint at \texttt{/health} for runtime checks.
+\end{itemize}
+
+\section{Manual Verification Paths}
+The actual implementation allows the following verification paths:
+\begin{itemize}
+  \item Run the backend with \texttt{uvicorn app.main:app --reload} and confirm the health route returns \texttt{{"status":"ok"}}.
+  \item Access Swagger UI for backend API discovery and contract verification.
+  \item Start Expo with \texttt{npm start} in \texttt{canteen-frontend} and validate mobile screen navigation.
+  \item Start Vite with \texttt{npm run dev} in \texttt{canteen-admin} and verify dashboard pages load.
+\end{itemize}
+
+\section{Testing Limitations}
+The current code snapshot does not include explicit JUnit, PyTest, or Jest test files. As a result, rigorous regression coverage is not directly observable in the repository contents.
+
+\chapter{Results}
+\section{Implemented Capabilities}
+The repository demonstrates a working implementation of the following capabilities:
+\begin{itemize}
+  \item End-to-end user journey from registration through order placement.
+  \item Backend route coverage for authentication, profile, menu, combo, order, wallet, QR verification, and inventory management.
+  \item Mobile navigation structure supporting home, menu, cart, orders, wallet, profile, and QR interaction.
+  \item Admin dashboard with authentication state, layout, and a foundation for inventory and orders management.
+\end{itemize}
+
+\section{Value Delivered}
+The implemented system delivers:
+\begin{itemize}
+  \item A practical mobile-friendly ordering experience for canteen customers.
+  \item A backend API surface suitable for mobile and web clients.
+  \item A modular codebase that separates concerns across backend routing, business services, schema validation, and frontend UI routes.
+\end{itemize}
+
+\chapter{Conclusion}
+This project report documents the actual implementation of the Canteen Management System based on the repository contents. The codebase exhibits a modern full-stack architecture, with a FastAPI backend, MongoDB persistence, an Expo React Native mobile client, and a React admin dashboard.
+
+Future enhancements could include explicit automated tests, restored role-based access control enforcement, richer admin analytics, and production-grade deployment configuration for both backend and mobile/web clients.
+
+\end{document}

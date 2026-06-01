@@ -1,5 +1,6 @@
 from fastapi import HTTPException, status
 from motor.motor_asyncio import AsyncIOMotorDatabase
+from pydantic import BaseModel
 from pymongo import ReturnDocument
 
 from app.models.base import ensure_object_id, now_utc, object_id_to_str
@@ -12,6 +13,8 @@ async def create_combo(db: AsyncIOMotorDatabase, payload: ComboCreate) -> dict:
     for item in payload.items:
         if isinstance(item, dict):
             menu_item_id = item.get("menu_item_id")
+        elif isinstance(item, BaseModel):
+            menu_item_id = getattr(item, "menu_item_id", None)
         else:
             menu_item_id = item
         try:
@@ -28,7 +31,7 @@ async def create_combo(db: AsyncIOMotorDatabase, payload: ComboCreate) -> dict:
                 detail=f"Menu item not found or unavailable: {menu_item_id}",
             )
 
-    document = create_combo_document(**payload.model_dump(mode="json"))
+    document = create_combo_document(**payload.model_dump(exclude={"created_at", "updated_at"}, mode="json"))
     result = await db.combos.insert_one(document)
     return object_id_to_str({**document, "_id": result.inserted_id})
 

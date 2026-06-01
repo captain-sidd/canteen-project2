@@ -16,5 +16,6 @@ export interface ComboInterface {
   isActive: boolean;
   isFeatured: boolean;
   isTrending: boolean;
+  isSpecial?: boolean;
   imageUrl?: string;
 }

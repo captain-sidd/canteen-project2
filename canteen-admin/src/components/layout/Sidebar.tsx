@@ -22,7 +22,6 @@ const SIDEBAR_ITEMS = [
   { name: 'Menu', path: '/menu', icon: Coffee },
   { name: 'Combos', path: '/combos', icon: UtensilsCrossed },
 
-  { name: 'Offers', path: '/offers', icon: Ticket },
   { name: 'Users', path: '/users', icon: Users },
   { name: 'Wallet', path: '/wallet', icon: Wallet },
   { name: 'Reports', path: '/reports', icon: BarChart3 },

@@ -1,0 +1,131 @@
+@startuml
+actor Student as student
+actor Admin as admin
+usecase "Browse Menu / Combos" as browse
+usecase "Place Order" as order
+usecase "Wallet Top-up / Payment" as wallet
+usecase "Show QR / Order Pickup" as qr
+usecase "Manage Menu, Combos, Inventory" as manage
+usecase "Monitor Orders & Payments" as dashboard
+student --> browse
+student --> order
+student --> wallet
+student --> qr
+admin --> manage
+admin --> dashboard
+admin --> order
+@enduml
+
+@startuml
+class UserResponse {
+  +id: str
+  +email: EmailStr
+  +role: UserRole
+}
+class MenuItemResponse {
+  +id: str
+  +name: str
+  +price: float
+  +category: str
+  +is_available: bool
+}
+class ComboResponse {
+  +id: str
+  +name: str
+  +items: list<ComboItem>
+  +combo_price: float
+}
+class OrderResponse {
+  +id: str
+  +user_id: str
+  +items: list<OrderItemResponse>
+  +total_amount: float
+  +payment_method: PaymentMethod
+  +status: OrderStatus
+}
+class WalletDetailsResponse {
+  +balance: float
+  +is_wallet_active: bool
+  +wallet_id: str
+}
+class WalletPaymentResponse {
+  +payment: PaymentResponse
+  +wallet_balance: float
+  +wallet_transaction: dict
+}
+OrderResponse --> UserResponse : belongs to
+OrderResponse --> MenuItemResponse : references
+ComboResponse --> MenuItemResponse : contains
+WalletDetailsResponse --> UserResponse : owned by
+WalletPaymentResponse --> OrderResponse : pays for
+@enduml
+
+@startuml
+component "Student Mobile App\n(Expo React Native)" as mobile
+component "Admin Dashboard\n(React + TypeScript)" as adminui
+component "Backend Service\n(FastAPI)" as backend
+component "MongoDB" as db
+mobile --> backend : REST /api/*
+adminui --> backend : REST /api/*
+backend --> db : MongoDB driver
+@enduml
+
+@startuml
+deploy "Mobile Device / Emulator" as mobileDevice
+node "API Server\n(FastAPI)" as apiServer
+database "MongoDB Server" as mongodb
+node "Browser" as browser
+mobileDevice --> apiServer : HTTPS / API Requests
+browser --> apiServer : HTTPS / API Requests
+apiServer --> mongodb : MongoDB TCP
+@enduml
+
+@startuml
+actor Student
+participant "Backend API" as Backend
+participant "Payment Service" as Payment
+participant "MongoDB" as DB
+Student -> Backend : POST /payments/wallet-pay\n(order_items, wallet_pin)
+Backend -> Payment : validate JWT\nget_current_user
+Payment -> DB : fetch wallet record\nverify PIN\nupdate balance
+Payment -> DB : create wallet transaction
+Payment --> Backend : WalletPaymentResponse
+Backend --> Student : 200 OK\nwallet payment result
+@enduml
+
+@startuml
+actor Student
+participant "Backend API" as Backend
+participant "Payment Service" as Payment
+participant "MongoDB" as DB
+Student -> Backend : POST /payments/upi-pay\n(order_items, upi_id)
+Backend -> Payment : validate JWT\nget_current_user
+Payment -> DB : record UPI payment document
+Payment --> Backend : UPIPaymentResponse
+Backend --> Student : 200 OK\nUPI payment result
+@enduml
+
+@startuml
+actor "QR Scanner / POS" as Scanner
+participant "Backend API" as Backend
+participant "QR Service" as QR
+participant "MongoDB" as DB
+Scanner -> Backend : POST /qr/verify\n(data)
+Backend -> QR : parse QR payload\nfetch order
+QR -> DB : update order status to completed
+QR --> Backend : verification result
+Backend --> Scanner : 200 OK\nQR verify response
+@enduml
+
+@startuml
+actor Student
+participant "Backend API" as Backend
+participant "Order Service" as Order
+participant "MongoDB" as DB
+Student -> Backend : POST /orders\n(items, total_amount, payment_method)
+Backend -> Order : validate JWT\nget_current_user
+Order -> DB : build order items\ncalculate totals
+Order -> DB : insert order document
+Order --> Backend : OrderResponse
+Backend --> Student : 201 Created\norder details
+@enduml

@@ -1,0 +1,46 @@
+The implemented system is composed of three major layers:
+\begin{itemize}[nosep]
+  \item \textbf{Client Layer}: student mobile app in \texttt{canteen-frontend} and admin dashboard in \texttt{canteen-admin}.
+  \item \textbf{Application Layer}: FastAPI backend in \texttt{canteen-backend/app}.
+  \item \textbf{Persistence Layer}: MongoDB accessed via \texttt{AsyncIOMotorClient} in \texttt{app/database/mongodb.py}.
+\end{itemize}
+
+\subsection{Component Diagram}
+\begin{center}
+\begin{tikzpicture}[node distance=2.2cm, every node/.style={draw, rounded corners, align=center, minimum width=3cm, minimum height=1.1cm}]
+  \node (mobile) {Student Mobile App\\(Expo React Native)};
+  \node (admin) [below=of mobile] {Admin Dashboard\\(React + TypeScript + Vite)};
+  \node (backend) [right=of mobile, xshift=3cm] {Backend Service\\(Python FastAPI)};
+  \node (db) [right=of backend, xshift=3cm] {MongoDB};
+
+  \draw[->, thick] (mobile) -- node[above] {HTTP/JSON REST \texttt{/api/*}} (backend);
+  \draw[->, thick] (admin) -- node[below] {HTTP/JSON REST \texttt{/api/*}} (backend);
+  \draw[->, thick] (backend) -- node[above] {MongoDB driver via \texttt{app/database/mongodb.py}} (db);
+\end{tikzpicture}
+\end{center}
+
+\subsection{Backend Module Structure}
+The backend is organized into the following functional modules:
+\begin{itemize}[nosep]
+  \item \texttt{app/main.py}: application startup, CORS, router registration, and health endpoint.
+  \item \texttt{app/routes}: REST routers for auth, menu, combos, orders, profile, users, wallet, payments, checkout, QR, and inventory.
+  \item \texttt{app/core}: authentication dependencies and security utilities.
+  \item \texttt{app/database}: MongoDB connection, collection initialization, and helper functions.
+  \item \texttt{app/services}: business logic for orders, wallet, auth, menu, combos, payments, checkout, inventory, and QR generation/verification.
+  \item \texttt{app/schemas}: request and response models used for input validation and output serialization.
+\end{itemize}
+
+\subsection{Data Flow}
+\begin{enumerate}[nosep]
+  \item The mobile app performs user authentication via \texttt{POST /api/auth/login} and stores the JWT in AsyncStorage.
+  \item User requests from the student app are sent to the backend with the Authorization header attached by \texttt{src/services/api.js}.
+  \item The backend resolves user identity via \texttt{app/core/dependencies.py} and accesses MongoDB collections from \texttt{app/database/mongodb.py}.
+  \item Orders are created through \texttt{POST /api/orders}, and QR codes are generated through \texttt{GET /api/qr/orders/\{order\_id\}}.
+  \item Admin actions traversing \texttt{canteen-admin/src/api/index.ts} call endpoints such as \texttt{GET /api/orders/all}, \texttt{POST /api/menu}, and \texttt{POST /api/inventory}.
+\end{enumerate}
+
+\subsection{Security Architecture}
+JWT bearer tokens protect most backend endpoints. The backend supports a demo fallback token \texttt{mock-jwt-token} in \texttt{app/core/dependencies.py}. Real authentication uses tokens decoded by \texttt{app/core/security.py} and user retrieval from MongoDB.
+
+\subsection{Deployment Considerations}
+The codebase includes separate front-end and backend packages that should be built independently. The mobile app uses a local API base URL configured in \texttt{canteen-frontend/src/services/api.js}. The admin dashboard depends on browser localStorage for admin credentials.

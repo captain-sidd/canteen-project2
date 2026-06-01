@@ -9,11 +9,17 @@ import { authApi, parseApiError } from '@/api';
 import { toast } from 'sonner';
 
 export default function Login() {
-  const { login } = useAuth();
+  const { login, isAuthenticated, loading } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState('admin@canteen.com');
   const [password, setPassword] = useState('password123');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  React.useEffect(() => {
+    if (!loading && isAuthenticated) {
+      navigate('/', { replace: true });
+    }
+  }, [isAuthenticated, loading, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,7 +27,7 @@ export default function Login() {
     try {
       const { access_token, user } = await authApi.login({ email, password });
       login(access_token, user);
-      navigate('/');
+      navigate('/', { replace: true });
     } catch (error) {
       toast.error('Login failed', { description: parseApiError(error) });
     } finally {

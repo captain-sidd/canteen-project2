@@ -184,6 +184,8 @@ export default function ComboManagement() {
           isOpen={isDialogOpen}
           onClose={() => setIsDialogOpen(false)}
           combo={selectedCombo}
+          menuItems={Array.isArray(menuItems) ? menuItems : []}
+          isSaving={saveMutation.isPending}
           onSave={handleSave}
         />
       )}

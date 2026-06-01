@@ -11,11 +11,9 @@ export function DashboardLayout() {
     return <div className="min-h-screen flex items-center justify-center bg-slate-50">Loading...</div>;
   }
 
-  // Allow passing through to dashboard even if mock auth is false for development visibility
-  // In real app, uncomment:
-  // if (!isAuthenticated) {
-  //   return <Navigate to="/login" replace />;
-  // }
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
 
   return (
     <div className="flex h-screen overflow-hidden bg-slate-50">

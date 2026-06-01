@@ -149,7 +149,7 @@ export default function InventoryManagement() {
       />
       
       <ConfirmDialog
-        isOpen={deleteDeleteDialogOpen}
+        isOpen={deleteDialogOpen}
         onClose={() => setDeleteDialogOpen(false)}
         onConfirm={confirmDelete}
         title="Delete Inventory Item"

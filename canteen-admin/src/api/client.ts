@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { queryClient } from '@/lib/queryClient';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 
@@ -23,6 +24,7 @@ apiClient.interceptors.response.use(
     if (error.response?.status === 401) {
       localStorage.removeItem('admin_token');
       localStorage.removeItem('admin_user');
+      queryClient.clear();
       window.location.href = '/login';
     }
     return Promise.reject(error);
